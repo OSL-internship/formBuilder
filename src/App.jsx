@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "./services/api";
 import { validateField } from "./lib/validation";
-import { isFieldVisible } from "./lib/conditionEvaluator";
+import { isFieldVisible, getVisibleFields, } from "./lib/conditionEvaluator";
 import { Routes, Route } from "react-router-dom";
 import FormRenderer from "./FormRenderer";
 
@@ -50,6 +50,9 @@ function App() {
     return () => clearTimeout(timer);
   }, [saveMessage]);
 
+  useEffect(() => {
+    fetchSavedForms();
+  }, []);
 
 
   function addField(type) {
@@ -251,7 +254,7 @@ function App() {
       case "Text":
         return (
           <>
-
+            {fieldLabel}
             <input type="text" {...commonProps} />
           </>
         );
@@ -259,24 +262,28 @@ function App() {
       case "Email":
         return (
           <>
+            {fieldLabel}
             <input type="email" {...commonProps} />
           </>
         );
       case "Number":
         return (
           <>
+            {fieldLabel}
             <input type="number" {...commonProps} />
           </>
         );
       case "Textarea":
         return (
           <>
+            {fieldLabel}
             <textarea {...commonProps} rows={3} />
           </>
         );
       case "Date":
         return (
           <>
+            {fieldLabel}
             <input type="date" {...commonProps} className={commonProps.className} />
           </>
         );
@@ -288,7 +295,13 @@ function App() {
                 id={field.id}
                 type="checkbox"
                 name={field.name}
-                checked={Boolean(formValues[field.name])}
+                checked={
+                  formValues[field.name] !== undefined
+                    ? formValues[field.name] === true ||
+                    formValues[field.name] === "true"
+                    : field.defaultValue === true ||
+                    field.defaultValue === "true"
+                }
                 required={field.required}
                 aria-invalid={errors[field.name]?.length > 0}
                 aria-describedby={
@@ -298,66 +311,92 @@ function App() {
                       ? `${field.id}-help`
                       : undefined
                 }
-                onChange={(e) =>
+                onChange={(e) => {
                   updateFormValue(field.name, e.target.checked)
+                  if (touchedFields[field.name]) {
+                    const updatedValue = e.target.checked;
+
+                    const updatedErrors = validateField(field, updatedValue);
+
+                    setErrors((current) => ({
+                      ...current,
+                      [field.name]: updatedErrors,
+                    }));
+                  }
                 }
+                }
+                onBlur={() => {
+                  setTouchedFields((current) => ({
+                    ...current,
+                    [field.name]: true,
+                  }));
+                  validateOneField(field);
+                }}
               />
               {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
             </label>
           </div>
         );
 
       case "Select":
         return (
-          <select
-            name={field.name}
-            id={field.id}
-            aria-invalid={errors[field.name]?.length > 0}
-            aria-describedby={
-              errors[field.name]?.length > 0
-                ? `${field.id}-error`
-                : field.helpText
-                  ? `${field.id}-help`
-                  : undefined
-            }
-            value={formValues[field.name] ?? ""}
-            onChange={(e) => {
-              const value = e.target.value;
-
-              updateFormValue(field.name, value);
-
-              if (touchedFields[field.name]) {
-                const fieldErrors = validateField(field, value);
-
-                setErrors((current) => ({
-                  ...current,
-                  [field.name]: fieldErrors,
-                }));
+          <>
+            {fieldLabel}
+            <select
+              name={field.name}
+              id={field.id}
+              aria-invalid={errors[field.name]?.length > 0}
+              aria-describedby={
+                errors[field.name]?.length > 0
+                  ? `${field.id}-error`
+                  : field.helpText
+                    ? `${field.id}-help`
+                    : undefined
               }
-            }}
-            onBlur={() => {
-              setTouchedFields((current) => ({
-                ...current,
-                [field.name]: true,
-              }));
-              validateOneField(field);
-            }}
-            required={field.required}
-            className={commonProps.className}
-          >
-            <option value="">Select an option</option>
+              value={formValues[field.name] ?? ""}
+              onChange={(e) => {
+                const value = e.target.value;
 
-            {(field.options || []).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+                updateFormValue(field.name, value);
+
+                if (touchedFields[field.name]) {
+                  const fieldErrors = validateField(field, value);
+
+                  setErrors((current) => ({
+                    ...current,
+                    [field.name]: fieldErrors,
+                  }));
+                }
+              }}
+              onBlur={() => {
+                setTouchedFields((current) => ({
+                  ...current,
+                  [field.name]: true,
+                }));
+                validateOneField(field);
+              }}
+              required={field.required}
+              className={commonProps.className}
+            >
+              <option value="">Select an option</option>
+
+              {(field.options || []).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </>
         );
 
       case "Radio Group":
         return (
           <div className="mt-2 space-y-2">
+            <p id={`${field.id}-label`} className="font-medium">
+              {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
+            </p>
             {field.options.map((option, index) => {
               const optionId = `${field.id}-option-${index}`;
 
@@ -367,11 +406,45 @@ function App() {
                     id={optionId}
                     type="radio"
                     name={field.name}
+                    required={field.required}
                     value={option}
-                    checked={formValues[field.name] === option}
-                    onChange={(e) =>
-                      updateFormValue(field.name, e.target.value)
+                    checked={
+                      (formValues[field.name] !== undefined
+                        ? formValues[field.name]
+                        : field.defaultValue) === option
                     }
+                    aria-labelledby={`${field.id}-label`}
+                    aria-invalid={errors[field.name]?.length > 0}
+                    aria-describedby={
+                      errors[field.name]?.length > 0
+                        ? `${field.id}-error`
+                        : field.helpText
+                          ? `${field.id}-help`
+                          : undefined
+                    }
+
+                    onChange={(e) => {
+                      updateFormValue(field.name, e.target.value);
+
+                      if (touchedFields[field.name]) {
+                        const updatedValue = e.target.value;
+
+                        const updatedErrors = validateField(field, updatedValue);
+
+                        setErrors((current) => ({
+                          ...current,
+                          [field.name]: updatedErrors,
+                        }));
+                      }
+                    }}
+
+                    onBlur={() => {
+                      setTouchedFields((current) => ({
+                        ...current,
+                        [field.name]: true,
+                      }));
+                      validateOneField(field);
+                    }}
                   />
                   {option}
                 </label>
@@ -474,7 +547,7 @@ function App() {
     setFields([]);
     setSelectedFieldId(null);
     setSaveMessage("");
-    setSavedForms([]);
+    // setSavedForms([]);
   }
 
   async function handleCopyLink(id) {
@@ -483,11 +556,11 @@ function App() {
     try {
       await navigator.clipboard.writeText(url);
       setSaveMessage("Form link copied successfully!");
-    } catch (error) {
+    } catch {
       setSaveMessage("Unable to copy form link.");
     }
   }
-  
+
 
   async function fetchSavedForms() {
     try {
@@ -499,6 +572,15 @@ function App() {
   }
 
   async function handleLoadForm(id) {
+
+    if (
+      !window.confirm(
+        "Loading this form will replace your current work. Do you want to continue?"
+      )
+    ) {
+      return;
+    }
+
     try {
       const data = await apiRequest(`/forms/${id}`);
       const form = data.form || data;
@@ -658,7 +740,10 @@ function App() {
               (key) =>
                 field[key] === "" ||
                 (typeof field[key] === "number" &&
-                  Number.isFinite(field[key]))
+                  Number.isFinite(field[key])) ||
+                (typeof field[key] === "string" &&
+                  field[key].trim() !== "" &&
+                  Number.isFinite(Number(field[key])))
             )
           ) {
             return false;
@@ -690,6 +775,62 @@ function App() {
           throw new Error("Schema contains invalid fields.");
         }
 
+        const fieldIds = schema.fields.map((field) => field.id);
+        const fieldNames = schema.fields.map((field) => field.name);
+
+        const validFieldIds = new Set(fieldIds);
+
+        const hasInvalidConditions = schema.fields.some((field) =>
+          field.conditions.some(
+            (condition) => !validFieldIds.has(condition.fieldId)
+          )
+        );
+
+        if (hasInvalidConditions) {
+          throw new Error("Condition references an invalid field.");
+        }
+
+        //circular condition
+        const fieldMap = new Map(
+          schema.fields.map((field) => [field.id, field])
+        );
+
+        function hasCircularCondition(fieldId, visited = new Set()) {
+          if (visited.has(fieldId)) {
+            return true;
+          }
+
+          const field = fieldMap.get(fieldId);
+
+          if (!field) return false;
+
+          const nextVisited = new Set(visited);
+          nextVisited.add(fieldId);
+
+          return field.conditions.some((condition) =>
+            hasCircularCondition(condition.fieldId, nextVisited)
+          );
+        }
+
+        const hasCircularConditions = schema.fields.some((field) =>
+          hasCircularCondition(field.id)
+        );
+
+        if (hasCircularConditions) {
+          throw new Error("Circular conditions are not allowed.");
+        }
+
+
+        if (
+          new Set(fieldIds).size !== fieldIds.length ||
+          new Set(fieldNames).size !== fieldNames.length
+        ) {
+          throw new Error("Duplicate field IDs or names found.");
+        }
+
+        setFormTitle(
+          typeof schema.title === "string" ? schema.title : "Untitled Form"
+        );
         setFields(schema.fields);
         setSelectedFieldId(null);
         setFormValues({});
@@ -736,12 +877,37 @@ function App() {
     setDraggedFieldId(null);
   }
 
+  //keyboard reorder
+  function moveField(fieldId, direction) {
+    setFields((currentFields) => {
+      const updatedFields = [...currentFields];
+
+      const currentIndex = updatedFields.findIndex(
+        (field) => field.id === fieldId
+      );
+
+      const newIndex = currentIndex + direction;
+
+      if (newIndex < 0 || newIndex >= updatedFields.length) {
+        return currentFields;
+      }
+
+      [updatedFields[currentIndex], updatedFields[newIndex]] = [
+        updatedFields[newIndex],
+        updatedFields[currentIndex],
+      ];
+
+      return updatedFields;
+    });
+  }
+
+  const visibleFields = getVisibleFields(fields, formValues);
 
   return (
     <Routes>
       <Route path="/" element={
         <div className="min-h-screen bg-slate-100 text-slate-900">
-       
+
           <header className="border-b bg-white px-4 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h1 className="text-xl font-bold text-indigo-600 lg:text-2xl">
@@ -771,7 +937,7 @@ function App() {
                 <button
                   onClick={handleSaveForm}
                   disabled={isSaving}
-                  className="rounded-lg bg-green-600 px-3 py-2 text-white"
+                  className="rounded-lg bg-green-700 px-3 py-2 text-white"
                 >
                   {isSaving ? "Saving..." : "Save Form"}
                 </button>
@@ -817,13 +983,18 @@ function App() {
                   Export JSON
                 </button>
 
-                <label className="cursor-pointer rounded-lg border px-4 py-2">
+                <label htmlFor="import-json" className="cursor-pointer rounded-lg border px-4 py-2 
+                 focus-within:outline focus-within:outline-2
+  focus-within:outline-indigo-600
+  focus-within:outline-offset-2
+                ">
                   Import JSON
                   <input
+                    id="import-json"
                     type="file"
                     accept=".json,application/json"
                     onChange={importJSON}
-                    className="hidden"
+                    className="sr-only"
                   />
                 </label>
               </div>
@@ -841,6 +1012,21 @@ function App() {
                   className="rounded-lg bg-green-600 px-3 py-2 text-white"
                 >
                   {isSaving ? "Saving..." : "Save Form"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handlePublishForm();
+                    setIsMenuOpen(false);
+                  }}
+                  disabled={!formId || isPublishing || formStatus === "published"}
+                  className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
+                >
+                  {isPublishing
+                    ? "Publishing..."
+                    : formStatus === "published"
+                      ? "Published"
+                      : "Publish"}
                 </button>
 
                 <button
@@ -874,7 +1060,9 @@ function App() {
                   Export JSON
                 </button>
 
-                <label className="cursor-pointer rounded-lg border px-4 py-2 text-center">
+                <label
+                  className="cursor-pointer rounded-lg border px-4 py-2 text-center focus-within:outline focus-within:outline-2 focus-within:outline-indigo-600 focus-within:outline-offset-2"
+                >
                   Import JSON
                   <input
                     type="file"
@@ -883,7 +1071,7 @@ function App() {
                       importJSON(e);
                       setIsMenuOpen(false);
                     }}
-                    className="hidden"
+                    className="sr-only"
                   />
                 </label>
               </div>
@@ -909,8 +1097,10 @@ function App() {
 
 
           <main className="grid min-h-[calc(100vh-73px)] grid-cols-1 sm:p-4 lg:grid-cols-12 gap-4 p-4">
-            <aside className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3">
-              <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
+            <aside
+              aria-label="Field Palette"
+              className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3"
+            >              <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
 
               <div className="space-y-3">
                 {fieldTypes.map((type) => (
@@ -935,34 +1125,28 @@ function App() {
 
               {isPreview ? (
                 <form onSubmit={handleSubmit} noValidate className="space-y-4">
-                  {fields.filter((field) => isFieldVisible(field, fields, formValues))
-                    .map((field) => (
-                      <div key={field.id}>
-                        <label className="block font-medium">
-                          {field.label}
-                          {field.required && (
-                            <span className="text-red-500"> *</span>
-                          )}
-                        </label>
+                 
+                  {visibleFields.map((field) => (
+                    <div key={field.id}>
 
-                        {renderField(field)}
-                        {field.helpText && (
-                          <p id={`${field.id}-help`} className="mt-1 text-sm text-slate-500">
-                            {field.helpText}
-                          </p>
-                        )}
-                        {errors[field.name]?.map((error, index) => (
-                          <p
-                            id={`${field.id}-error`}
-                            key={index}
-                            className="mt-1 text-sm text-red-600"
-                            role="alert"
-                          >
-                            {errors[field.name]?.join(", ")}
-                          </p>
-                        ))}
-                      </div>
-                    ))}
+
+                      {renderField(field)}
+                      {field.helpText && (
+                        <p id={`${field.id}-help`} className="mt-1 text-sm text-slate-500">
+                          {field.helpText}
+                        </p>
+                      )}
+                      {errors[field.name]?.length > 0 && (
+                        <p
+                          id={`${field.id}-error`}
+                          className="mt-1 text-sm text-red-600"
+                          role="alert"
+                        >
+                          {errors[field.name].join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  ))}
 
                   <button
                     type="submit"
@@ -972,8 +1156,10 @@ function App() {
                   </button>
 
                   {submittedData && (
-                    <pre className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm">
-                      {JSON.stringify(submittedData, null, 2)}
+                    <pre
+                      tabIndex={0}
+                      className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
+                    >                      {JSON.stringify(submittedData, null, 2)}
                     </pre>
                   )}
                 </form>
@@ -995,19 +1181,40 @@ function App() {
                     fields.map((field) => (
                       <div
                         key={field.id}
+                        tabIndex={0}
+
+                        onKeyDown={(e) => {
+                          if (e.target !== e.currentTarget) return;
+
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedFieldId(field.id);
+                          }
+
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            moveField(field.id, -1);
+                          }
+
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            moveField(field.id, 1);
+                          }
+                        }}
                         draggable
                         onDragStart={() => setDraggedFieldId(field.id)}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => handleDrop(field.id)}
                         onDragEnd={() => setDraggedFieldId(null)}
                         onClick={() => setSelectedFieldId(field.id)}
+
                         className={`cursor-move rounded-lg border bg-white p-4 ${selectedFieldId === field.id
                           ? "border-indigo-600 ring-2 ring-indigo-100"
                           : "border-slate-200"
                           } ${draggedFieldId === field.id ? "opacity-50" : ""
                           }`}
                       >
-                        <p className="font-medium">{field.label}</p>
+                    
 
                         {renderField(field)}
                         {field.helpText && (
@@ -1049,8 +1256,8 @@ function App() {
                       <span className="text-sm font-bold">{form.title}</span>
                       <span
                         className={`text-xs font-medium ${form.status === "published"
-                          ? "text-green-600"
-                          : "text-amber-600"
+                          ? "text-green-700"
+                          : "text-amber-800"
                           }`}
                       >
                         {form.status || "draft"}
@@ -1099,10 +1306,11 @@ function App() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-label`} className="mb-1 block text-sm font-medium">
                       Label
                     </label>
                     <input
+                      id={`${selectedField.id}-property-label`}
                       value={selectedField.label}
                       onChange={(e) =>
                         updateSelectedField("label", e.target.value)
@@ -1112,10 +1320,11 @@ function App() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-name`} className="mb-1 block text-sm font-medium">
                       Name
                     </label>
                     <input
+                      id={`${selectedField.id}-property-name`}
                       value={selectedField.name}
                       onChange={(e) =>
                         updateSelectedField("name", e.target.value)
@@ -1125,10 +1334,11 @@ function App() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-placeholder`} className="mb-1 block text-sm font-medium">
                       Placeholder
                     </label>
                     <input
+                      id={`${selectedField.id}-property-placeholder`}
                       value={selectedField.placeholder}
                       onChange={(e) =>
                         updateSelectedField("placeholder", e.target.value)
@@ -1138,10 +1348,11 @@ function App() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-default`} className="mb-1 block text-sm font-medium">
                       Default Value
                     </label>
                     <input
+                      id={`${selectedField.id}-property-default`}
                       value={selectedField.defaultValue ?? ""}
                       onChange={(e) =>
                         updateSelectedField("defaultValue", e.target.value)
@@ -1151,10 +1362,11 @@ function App() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-help`} className="mb-1 block text-sm font-medium">
                       Help Text
                     </label>
                     <input
+                      id={`${selectedField.id}-property-help`}
                       value={selectedField.helpText ?? ""}
                       onChange={(e) =>
                         updateSelectedField("helpText", e.target.value)
@@ -1163,8 +1375,9 @@ function App() {
                     />
                   </div>
 
-                  <label className="flex items-center gap-2">
+                  <label htmlFor={`${selectedField.id}-property-required`} className="flex items-center gap-2">
                     <input
+                      id={`${selectedField.id}-property-required`}
                       type="checkbox"
                       checked={selectedField.required}
                       onChange={(e) =>
@@ -1177,25 +1390,43 @@ function App() {
                   <div className="space-y-3 rounded-lg border p-3">
                     <h3 className="font-medium">Conditional Logic</h3>
 
-                    <label className="block text-sm">
+                    <label htmlFor={`${selectedField.id}-condition-field`} className="block text-sm">
                       Show this field when
                     </label>
 
                     <select
+                      id={`${selectedField.id}-condition-field`}
                       className="w-full rounded-lg border p-2"
                       value={selectedField.conditions?.[0]?.fieldId || ""}
-                      onChange={(e) =>
-                        updateSelectedField(
-                          "conditions",
-                          e.target.value
-                            ? [{
-                              fieldId: e.target.value,
-                              operator: "equals",
-                              value: "",
-                            }]
-                            : []
-                        )
-                      }
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const currentConditions = selectedField.conditions || [];
+
+                        if (!selectedId) {
+                          updateSelectedField(
+                            "conditions",
+                            currentConditions.slice(1)
+                          );
+                          return;
+                        }
+
+                        const updatedConditions = [...currentConditions];
+
+                        if (updatedConditions.length > 0) {
+                          updatedConditions[0] = {
+                            ...updatedConditions[0],
+                            fieldId: selectedId,
+                          };
+                        } else {
+                          updatedConditions.push({
+                            fieldId: selectedId,
+                            operator: "equals",
+                            value: "",
+                          });
+                        }
+
+                        updateSelectedField("conditions", updatedConditions);
+                      }}
                     >
                       <option value="">Always show</option>
                       {fields
@@ -1207,15 +1438,16 @@ function App() {
                         ))}
                     </select>
 
-                 
+
                     {selectedField.conditions?.length > 0 && (
                       <div className="space-y-3">
-                        <label className="font-medium">
+                        <label htmlFor={`${selectedField.id}-condition-match`} className="font-medium">
                           Match Conditions
                         </label>
 
                         {/* AND / OR selection */}
                         <select
+                          id={`${selectedField.id}-condition-match`}
                           className="w-full rounded-lg border p-2"
                           value={selectedField.conditionLogic || "AND"}
                           onChange={(e) =>
@@ -1232,12 +1464,13 @@ function App() {
                             key={index}
                             className="space-y-2 rounded-lg border p-3"
                           >
-                            <label className="text-sm font-medium">
+                            <label htmlFor={`${selectedField.id}-condition-${index}`} className="text-sm font-medium">
                               Condition {index + 1}
                             </label>
 
                             {/* Source field */}
                             <select
+                              id={`${selectedField.id}-condition-${index}`}
                               className="w-full rounded-lg border p-2"
                               value={condition.fieldId}
                               onChange={(e) => {
@@ -1264,6 +1497,8 @@ function App() {
 
                             {/* Operator */}
                             <select
+                              id={`${selectedField.id}-condition-operator-${index}`}
+                              aria-label={`Condition ${index + 1} operator`}
                               className="w-full rounded-lg border p-2"
                               value={condition.operator}
                               onChange={(e) => {
@@ -1288,6 +1523,8 @@ function App() {
                             {/* Comparison value */}
                             {condition.operator !== "isEmpty" && (
                               <input
+                                id={`${selectedField.id}-condition-value-${index}`}
+                                aria-label={`Condition ${index + 1} comparison value`}
                                 className="w-full rounded-lg border p-2"
                                 placeholder="Comparison value"
                                 value={condition.value ?? ""}
@@ -1348,10 +1585,11 @@ function App() {
                   {["Text", "Textarea", "Email"].includes(selectedField.type) && (
                     <>
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-property-min-length`} className="mb-1 block text-sm font-medium">
                           Minimum Length
                         </label>
                         <input
+                          id={`${selectedField.id}-property-min-length`}
                           type="number"
                           min="0"
                           value={selectedField.minLength ?? ""}
@@ -1363,10 +1601,11 @@ function App() {
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-property-max-length`} className="mb-1 block text-sm font-medium">
                           Maximum Length
                         </label>
                         <input
+                          id={`${selectedField.id}-property-max-length`}
                           type="number"
                           min="0"
                           value={selectedField.maxLength ?? ""}
@@ -1377,10 +1616,11 @@ function App() {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-property-pattern`} className="mb-1 block text-sm font-medium">
                           Regex Pattern
                         </label>
                         <input
+                          id={`${selectedField.id}-property-pattern`}
                           value={selectedField.pattern ?? ""}
                           onChange={(e) =>
                             updateSelectedField("pattern", e.target.value)
@@ -1395,10 +1635,11 @@ function App() {
                   {selectedField.type === "Number" && (
                     <>
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-property-min-value`} className="mb-1 block text-sm font-medium">
                           Minimum Value
                         </label>
                         <input
+                          id={`${selectedField.id}-property-min-value`}
                           type="number"
                           value={selectedField.minValue ?? ""}
                           onChange={(e) =>
@@ -1409,10 +1650,11 @@ function App() {
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-property-max-value`} className="mb-1 block text-sm font-medium">
                           Maximum Value
                         </label>
                         <input
+                          id={`${selectedField.id}-property-max-value`}
                           type="number"
                           value={selectedField.maxValue ?? ""}
                           onChange={(e) =>
@@ -1425,10 +1667,11 @@ function App() {
                   )}
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">
+                    <label htmlFor={`${selectedField.id}-property-custom-error`} className="mb-1 block text-sm font-medium">
                       Custom Error Message
                     </label>
                     <input
+                      id={`${selectedField.id}-property-custom-error`}
                       value={selectedField.errorMessage ?? ""}
                       onChange={(e) =>
                         updateSelectedField("errorMessage", e.target.value)
@@ -1446,11 +1689,12 @@ function App() {
                   {(selectedField.type === "Select" ||
                     selectedField.type === "Radio Group") && (
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
+                        <label htmlFor={`${selectedField.id}-radio-options`} className="mb-1 block text-sm font-medium">
                           Options
                         </label>
 
                         <textarea
+                          id={`${selectedField.id}-radio-options`}
                           value={(selectedField.options || []).join("\n")}
                           onChange={(e) =>
                             updateSelectedField(

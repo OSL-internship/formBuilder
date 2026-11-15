@@ -1,3 +1,4 @@
+import safeRegex from "safe-regex2";
 export function validateField(field, value) {
   const errors = [];
   const empty =
@@ -69,10 +70,16 @@ export function validateField(field, value) {
 
   if (field.pattern) {
     try {
-      if (!new RegExp(field.pattern).test(text)) {
-        errors.push(
-         "Value format is invalid."
-        );
+      if (field.pattern.length > 100) {
+        errors.push("Validation pattern is too long.");
+      } else {
+        const regex = new RegExp(field.pattern);
+
+        if (!safeRegex(regex)) {
+          errors.push("This validation pattern is not safe.");
+        } else if (!regex.test(text)) {
+          errors.push("Value format is invalid.");
+        }
       }
     } catch {
       errors.push("The configured validation pattern is invalid.");

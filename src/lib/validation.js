@@ -71,7 +71,7 @@ export function validateField(field, value) {
     try {
       if (!new RegExp(field.pattern).test(text)) {
         errors.push(
-         "Value format is invalid."
+           field.errorMessage ||"Value format is invalid."
         );
       }
     } catch {

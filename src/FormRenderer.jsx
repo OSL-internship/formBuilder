@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiRequest } from "./services/api";
 import { validateField } from "./lib/validation";
-import { isFieldVisible } from "./lib/conditionEvaluator";
+import { isFieldVisible, getVisibleFields } from "./lib/conditionEvaluator";
 
 function FormRenderer() {
     const { id } = useParams();
@@ -22,7 +21,23 @@ function FormRenderer() {
         async function fetchForm() {
             try {
                 const data = await apiRequest(`/forms/${id}/published`);
-                setForm(data.form || data);
+                const fetchedForm = data.form || data;
+
+                setForm(fetchedForm);
+
+                // Initialize default values
+                const initialValues = {};
+
+                fetchedForm.fields.forEach((field) => {
+                    initialValues[field.name] =
+                        field.defaultValue !== undefined
+                            ? field.defaultValue
+                            : field.type === "Checkbox"
+                                ? false
+                                : "";
+                });
+
+                setFormValues(initialValues);
             } catch (error) {
                 setError(error.message);
             } finally {
@@ -35,15 +50,14 @@ function FormRenderer() {
 
 
     useEffect(() => {
-        if (!successMessage && !error) return;
+        if (!successMessage) return;
 
         const timer = setTimeout(() => {
             setSuccessMessage("");
-            setError("");
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [successMessage, error]);
+    }, [successMessage]);
 
     // Update form values
     function updateFormValue(name, value) {
@@ -215,7 +229,10 @@ function FormRenderer() {
 
             const data = await apiRequest(`/forms/${id}/submit`, {
                 method: "POST",
-                body: JSON.stringify(formValues),
+                body: JSON.stringify({
+                    ...formValues,
+                    _formUpdatedAt: form.updatedAt,
+                }),
             });
 
             setSuccessMessage(
@@ -255,7 +272,7 @@ function FormRenderer() {
     if (error && !form) return <p>{error}</p>;
 
     if (!form) return <p>Form not found.</p>;
-
+    const visibleFields = getVisibleFields(form.fields, formValues);
     return (
         <div className="min-h-screen bg-slate-100 p-6">
             <div className="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow">
@@ -265,33 +282,41 @@ function FormRenderer() {
                 </h1>
 
                 <form onSubmit={handleSubmit} noValidate>
-                    {form.fields
+                    {/* {form.fields
                         .filter((field) =>
                             isFieldVisible(field, form.fields, formValues)
                         )
-                        .map((field) => (
-                            <div key={field.id} className="mb-5">
-                                <label className="font-medium">
-                                    {field.label}
-                                    {field.required && (
-                                        <span className="text-red-500"> *</span>
-                                    )}
-                                </label>
+                        .map((field) => ( */}
+                    {visibleFields.map((field) => (
+                        <div key={field.id} className="mb-5">
+                            <label className="font-medium">
+                                {field.label}
+                                {field.required && (
+                                    <span className="text-red-500"> *</span>
+                                )}
+                            </label>
 
-                                <div className="mt-2">
-                                    {renderField(field)}
 
-                                    {errors[field.name]?.map((message, index) => (
-                                        <p
-                                            key={index}
-                                            className="mt-1 text-sm text-red-500"
-                                        >
-                                            {message}
-                                        </p>
-                                    ))}
-                                </div>
+
+
+                            <div className="mt-2">
+                                {renderField(field)}
+                                {field.helpText && (
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        {field.helpText}
+                                    </p>
+                                )}
+                                {errors[field.name]?.map((message, index) => (
+                                    <p
+                                        key={index}
+                                        className="mt-1 text-sm text-red-500"
+                                    >
+                                        {message}
+                                    </p>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+                    ))}
 
                     <button
                         type="submit"

@@ -11,7 +11,7 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 - Field validation, including required fields, email, length, number, and regex validation.
 - Import and export forms using JSON.
 - Save, load, update, and delete forms.
-- Preview forms and manage submitted responses.
+-Preview forms and submit responses through published forms.
 - Responsive design for desktop and mobile.
 
 ## Tech Stack
@@ -20,7 +20,7 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 
 **Backend:** Node.js, Express.js, MongoDB, Mongoose
 
-## Installation and Setup
+## Installation and Setup  
 
 ### Prerequisites
 - Node.js and npm
@@ -29,7 +29,7 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 ### Frontend Setup
 
 ```bash
-cd client
+
 npm install
 ```
 
@@ -67,4 +67,4 @@ npm start
 
 ## Project Purpose
 
-This project was built to make form creation and response management simple using drag and drop, conditional logic, and validation.
+This project was built to simplify form creation using drag and drop, conditional logic, and field validation.

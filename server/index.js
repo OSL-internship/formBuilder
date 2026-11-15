@@ -1,3 +1,4 @@
+import process from "node:process";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -163,8 +164,7 @@ app.get("/api/forms/:id", async (req, res) => {
 app.post("/api/forms/:id/submit", async (req, res) => {
   try {
     const { id } = req.params;
-    const answers = req.body;
-
+    const { _formUpdatedAt, ...answers } = req.body;
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         message: "Invalid form ID.",
@@ -186,6 +186,16 @@ app.post("/api/forms/:id/submit", async (req, res) => {
     }
 
     if (
+      !_formUpdatedAt ||
+      new Date(_formUpdatedAt).getTime() !==
+      new Date(form.updatedAt).getTime()
+    ) {
+      return res.status(409).json({
+        message: "This form was updated. Please reload and try again.",
+      });
+    }
+
+    if (
       !answers ||
       typeof answers !== "object" ||
       Array.isArray(answers)
@@ -202,7 +212,10 @@ app.post("/api/forms/:id/submit", async (req, res) => {
     );
 
     visibleFields.forEach((field) => {
-      const value = answers[field.name];
+      const value =
+        answers[field.name] !== undefined
+          ? answers[field.name]
+          : field.defaultValue ?? "";
       const fieldErrors = validateField(field, value);
 
       if (fieldErrors.length > 0) {
@@ -221,7 +234,10 @@ app.post("/api/forms/:id/submit", async (req, res) => {
 
     visibleFields.forEach((field) => {
       if (answers[field.name] !== undefined) {
-        submittedAnswers[field.name] = answers[field.name];
+        submittedAnswers[field.name] =
+          answers[field.name] !== undefined
+            ? answers[field.name]
+            : field.defaultValue ?? "";
       }
     });
 
@@ -325,7 +341,7 @@ app.patch("/api/forms/:id/publish", async (req, res) => {
     res.json({
       message: "Form published successfully",
       form,
-      shareUrl: `http://localhost:5173/forms/${form._id}`,
+      shareUrl: `${process.env.FRONTEND_URL}/forms/${form._id}`,
     });
   } catch (error) {
     console.error("Publish form error:", error);

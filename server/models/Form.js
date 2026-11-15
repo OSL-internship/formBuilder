@@ -58,6 +58,21 @@ const fieldSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    defaultValue: {
+      type: mongoose.Schema.Types.Mixed,
+      default: "",
+    },
+
+    helpText: {
+      type: String,
+      default: "",
+    },
+
+    conditionLogic: {
+      type: String,
+      enum: ["AND", "OR"],
+      default: "AND",
+    },
     required: {
       type: Boolean,
       default: false,
@@ -95,7 +110,7 @@ const fieldSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { _id: false ,id:false }
+  { _id: false, id: false }
 );
 
 const formSchema = new mongoose.Schema(
@@ -109,7 +124,7 @@ const formSchema = new mongoose.Schema(
       type: [fieldSchema],
       default: [],
     },
-     status: {
+    status: {
       type: String,
       enum: ["draft", "published"],
       default: "draft",
