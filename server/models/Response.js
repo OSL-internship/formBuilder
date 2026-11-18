@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const responseSchema = new mongoose.Schema(
@@ -13,7 +12,7 @@ const responseSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Response = mongoose.model("Response", responseSchema);

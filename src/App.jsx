@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "./services/api";
 import { validateField } from "./lib/validation";
-import { isFieldVisible, getVisibleFields, } from "./lib/conditionEvaluator";
+import { getVisibleFields } from "./lib/conditionEvaluator";
 import { Routes, Route } from "react-router-dom";
 import FormRenderer from "./FormRenderer";
-
 
 const fieldTypes = [
   "Text",
@@ -35,7 +34,6 @@ function App() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [formStatus, setFormStatus] = useState("draft");
 
-
   const [draggedFieldType, setDraggedFieldType] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [saveMessageType, setSaveMessageType] = useState("");
@@ -53,7 +51,6 @@ function App() {
   useEffect(() => {
     fetchSavedForms();
   }, []);
-
 
   function addField(type) {
     const baseName = type.toLowerCase().replaceAll(" ", "_");
@@ -89,16 +86,13 @@ function App() {
     setSelectedFieldId(newField.id);
   }
 
-  const selectedField = fields.find(
-    (field) => field.id === selectedFieldId
-  );
-
+  const selectedField = fields.find((field) => field.id === selectedFieldId);
 
   function updateSelectedField(property, value) {
     if (property === "conditions") {
       setImportError("");
       const selectedField = fields.find(
-        (field) => field.id === selectedFieldId
+        (field) => field.id === selectedFieldId,
       );
 
       if (!selectedField) return;
@@ -113,45 +107,41 @@ function App() {
         if (!field) return false;
 
         return (field.conditions || []).some((condition) =>
-          createsCycle(condition.fieldId, new Set(visited))
+          createsCycle(condition.fieldId, new Set(visited)),
         );
       };
 
       const hasCycle = value.some(
-        (condition) =>
-          condition.fieldId && createsCycle(condition.fieldId)
+        (condition) => condition.fieldId && createsCycle(condition.fieldId),
       );
 
       if (hasCycle) {
-        setImportError("Circular condition detected. Please choose another field.");
+        setImportError(
+          "Circular condition detected. Please choose another field.",
+        );
         return;
       }
     }
 
     setFields((currentFields) =>
       currentFields.map((field) =>
-        field.id === selectedFieldId
-          ? { ...field, [property]: value }
-          : field
-      )
+        field.id === selectedFieldId ? { ...field, [property]: value } : field,
+      ),
     );
   }
-
 
   function deleteSelectedField() {
     const dependentFields = fields.filter((field) =>
       field.conditions?.some(
-        (condition) => condition.fieldId === selectedFieldId
-      )
+        (condition) => condition.fieldId === selectedFieldId,
+      ),
     );
 
     if (dependentFields.length > 0) {
-      const names = dependentFields
-        .map((field) => field.label)
-        .join(", ");
+      const names = dependentFields.map((field) => field.label).join(", ");
 
       const confirmed = window.confirm(
-        `These fields depend on this field: ${names}. Delete it and remove their conditions?`
+        `These fields depend on this field: ${names}. Delete it and remove their conditions?`,
       );
 
       if (!confirmed) return;
@@ -163,19 +153,18 @@ function App() {
         .map((field) => ({
           ...field,
           conditions: (field.conditions || []).filter(
-            (condition) => condition.fieldId !== selectedFieldId
+            (condition) => condition.fieldId !== selectedFieldId,
           ),
-        }))
+        })),
     );
 
     setSelectedFieldId(null);
     setImportError("");
   }
 
-
   async function handleDeleteForm(id) {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this form?"
+      "Are you sure you want to delete this form?",
     );
 
     if (!confirmDelete) return;
@@ -201,11 +190,12 @@ function App() {
     const commonProps = {
       id: field.id,
       "aria-invalid": errors[field.name]?.length > 0,
-      "aria-describedby": errors[field.name]?.length > 0
-        ? `${field.id}-error`
-        : field.helpText
-          ? `${field.id}-help`
-          : undefined,
+      "aria-describedby":
+        errors[field.name]?.length > 0
+          ? `${field.id}-error`
+          : field.helpText
+            ? `${field.id}-help`
+            : undefined,
       name: field.name,
       placeholder: field.placeholder || field.label,
       value: formValues[field.name] ?? field.defaultValue ?? "",
@@ -241,7 +231,6 @@ function App() {
       },
       className: "mt-2 w-full rounded-lg border border-slate-300 p-2",
     };
-
 
     const fieldLabel = (
       <label htmlFor={field.id} className="block font-medium">
@@ -284,7 +273,11 @@ function App() {
         return (
           <>
             {fieldLabel}
-            <input type="date" {...commonProps} className={commonProps.className} />
+            <input
+              type="date"
+              {...commonProps}
+              className={commonProps.className}
+            />
           </>
         );
       case "Checkbox":
@@ -312,7 +305,7 @@ function App() {
                       : undefined
                 }
                 onChange={(e) => {
-                  updateFormValue(field.name, e.target.checked)
+                  updateFormValue(field.name, e.target.checked);
                   if (touchedFields[field.name]) {
                     const updatedValue = e.target.checked;
 
@@ -323,8 +316,7 @@ function App() {
                       [field.name]: updatedErrors,
                     }));
                   }
-                }
-                }
+                }}
                 onBlur={() => {
                   setTouchedFields((current) => ({
                     ...current,
@@ -401,7 +393,11 @@ function App() {
               const optionId = `${field.id}-option-${index}`;
 
               return (
-                <label key={optionId} htmlFor={optionId} className="flex items-center gap-2">
+                <label
+                  key={optionId}
+                  htmlFor={optionId}
+                  className="flex items-center gap-2"
+                >
                   <input
                     id={optionId}
                     type="radio"
@@ -429,7 +425,10 @@ function App() {
                       if (touchedFields[field.name]) {
                         const updatedValue = e.target.value;
 
-                        const updatedErrors = validateField(field, updatedValue);
+                        const updatedErrors = validateField(
+                          field,
+                          updatedValue,
+                        );
 
                         setErrors((current) => ({
                           ...current,
@@ -457,16 +456,12 @@ function App() {
     }
   }
 
-
-
   function updateFormValue(name, value) {
     setFormValues((currentValues) => ({
       ...currentValues,
       [name]: value,
     }));
   }
-
-
 
   async function handleSaveForm() {
     if (!formTitle.trim()) {
@@ -480,16 +475,13 @@ function App() {
       setSaveMessage("");
       setSaveMessageType("");
 
-      const data = await apiRequest(
-        formId ? `/forms/${formId}` : "/forms",
-        {
-          method: formId ? "PUT" : "POST",
-          body: JSON.stringify({
-            title: formTitle,
-            fields,
-          }),
-        }
-      );
+      const data = await apiRequest(formId ? `/forms/${formId}` : "/forms", {
+        method: formId ? "PUT" : "POST",
+        body: JSON.stringify({
+          title: formTitle,
+          fields,
+        }),
+      });
 
       const savedForm = data.form || data;
       setFormId(savedForm._id || savedForm.id);
@@ -497,7 +489,6 @@ function App() {
       if (savedForm.status) {
         setFormStatus(savedForm.status);
       }
-
 
       setSaveMessage("Form saved successfully!");
       setSaveMessageType("success");
@@ -508,7 +499,6 @@ function App() {
       setIsSaving(false);
     }
   }
-
 
   async function handlePublishForm() {
     if (!formId) {
@@ -539,7 +529,6 @@ function App() {
     }
   }
 
-
   function handleNewForm() {
     setFormId(null);
     setFormStatus("draft");
@@ -561,7 +550,6 @@ function App() {
     }
   }
 
-
   async function fetchSavedForms() {
     try {
       const data = await apiRequest("/forms");
@@ -572,13 +560,14 @@ function App() {
   }
 
   async function handleLoadForm(id) {
-
-    if (
-      !window.confirm(
-        "Loading this form will replace your current work. Do you want to continue?"
-      )
-    ) {
-      return;
+    if (fields.length > 0) {
+      if (
+        !window.confirm(
+          "Loading this form will replace your current work. Do you want to continue?",
+        )
+      ) {
+        return;
+      }
     }
 
     try {
@@ -600,17 +589,13 @@ function App() {
     }
   }
 
-
-
   function handleSubmit(e) {
     e.preventDefault();
 
     const newErrors = {};
 
     // Only validate visible fields
-    const visibleFields = fields.filter((field) =>
-      isFieldVisible(field, fields, formValues)
-    );
+    const visibleFields = getVisibleFields(fields, formValues);
 
     visibleFields.forEach((field) => {
       const value = formValues[field.name] ?? field.defaultValue ?? "";
@@ -633,12 +618,11 @@ function App() {
       visibleFields.map((field) => [
         field.name,
         formValues[field.name] ?? field.defaultValue ?? "",
-      ])
+      ]),
     );
 
     setSubmittedData(submittedValues);
   }
-
 
   function validateOneField(field) {
     const value = formValues[field.name] ?? "";
@@ -657,7 +641,6 @@ function App() {
     });
   }
 
-
   function exportJSON() {
     const schema = {
       title: formTitle,
@@ -675,8 +658,6 @@ function App() {
 
     URL.revokeObjectURL(url);
   }
-
-
 
   function importJSON(e) {
     const file = e.target.files?.[0];
@@ -700,17 +681,41 @@ function App() {
         }
 
         const validTypes = [
-          "Text", "Textarea", "Number", "Email",
-          "Select", "Radio Group", "Checkbox", "Date",
+          "Text",
+          "Textarea",
+          "Number",
+          "Email",
+          "Select",
+          "Radio Group",
+          "Checkbox",
+          "Date",
+        ];
+
+        const validOperators = [
+          "equals",
+          "notEquals",
+          "contains",
+          "greaterThan",
+          "lessThan",
+          "isEmpty",
         ];
 
         const stringProperties = [
-          "id", "name", "label", "placeholder",
-          "defaultValue", "helpText", "pattern", "errorMessage",
+          "id",
+          "name",
+          "label",
+          "placeholder",
+          "defaultValue",
+          "helpText",
+          "pattern",
+          "errorMessage",
         ];
 
         const numericProperties = [
-          "minLength", "maxLength", "minValue", "maxValue",
+          "minLength",
+          "maxLength",
+          "minValue",
+          "maxValue",
         ];
 
         const validFields = schema.fields.every((field) => {
@@ -724,9 +729,7 @@ function App() {
           }
 
           if (
-            !stringProperties.every(
-              (key) => typeof field[key] === "string"
-            )
+            !stringProperties.every((key) => typeof field[key] === "string")
           ) {
             return false;
           }
@@ -743,7 +746,7 @@ function App() {
                   Number.isFinite(field[key])) ||
                 (typeof field[key] === "string" &&
                   field[key].trim() !== "" &&
-                  Number.isFinite(Number(field[key])))
+                  Number.isFinite(Number(field[key]))),
             )
           ) {
             return false;
@@ -762,7 +765,8 @@ function App() {
               (condition) =>
                 condition &&
                 typeof condition === "object" &&
-                !Array.isArray(condition)
+                !Array.isArray(condition) &&
+                validOperators.includes(condition.operator),
             )
           ) {
             return false;
@@ -782,8 +786,8 @@ function App() {
 
         const hasInvalidConditions = schema.fields.some((field) =>
           field.conditions.some(
-            (condition) => !validFieldIds.has(condition.fieldId)
-          )
+            (condition) => !validFieldIds.has(condition.fieldId),
+          ),
         );
 
         if (hasInvalidConditions) {
@@ -792,7 +796,7 @@ function App() {
 
         //circular condition
         const fieldMap = new Map(
-          schema.fields.map((field) => [field.id, field])
+          schema.fields.map((field) => [field.id, field]),
         );
 
         function hasCircularCondition(fieldId, visited = new Set()) {
@@ -808,18 +812,17 @@ function App() {
           nextVisited.add(fieldId);
 
           return field.conditions.some((condition) =>
-            hasCircularCondition(condition.fieldId, nextVisited)
+            hasCircularCondition(condition.fieldId, nextVisited),
           );
         }
 
         const hasCircularConditions = schema.fields.some((field) =>
-          hasCircularCondition(field.id)
+          hasCircularCondition(field.id),
         );
 
         if (hasCircularConditions) {
           throw new Error("Circular conditions are not allowed.");
         }
-
 
         if (
           new Set(fieldIds).size !== fieldIds.length ||
@@ -829,23 +832,23 @@ function App() {
         }
 
         setFormTitle(
-          typeof schema.title === "string" ? schema.title : "Untitled Form"
+          typeof schema.title === "string" ? schema.title : "Untitled Form",
         );
         setFields(schema.fields);
         setSelectedFieldId(null);
         setFormValues({});
         setErrors({});
         setSubmittedData(null);
-      } catch {
-        setImportError("Invalid JSON file or unsupported schema.");
+      } catch (error) {
+        setImportError(
+          error.message || "Invalid JSON file or unsupported schema.",
+        );
       }
     };
 
     reader.readAsText(file);
     e.target.value = "";
   }
-
-
 
   function handleDrop(targetFieldId) {
     if (!draggedFieldId || draggedFieldId === targetFieldId) {
@@ -857,11 +860,11 @@ function App() {
       const updatedFields = [...currentFields];
 
       const draggedIndex = updatedFields.findIndex(
-        (field) => field.id === draggedFieldId
+        (field) => field.id === draggedFieldId,
       );
 
       const targetIndex = updatedFields.findIndex(
-        (field) => field.id === targetFieldId
+        (field) => field.id === targetFieldId,
       );
 
       if (draggedIndex === -1 || targetIndex === -1) {
@@ -883,7 +886,7 @@ function App() {
       const updatedFields = [...currentFields];
 
       const currentIndex = updatedFields.findIndex(
-        (field) => field.id === fieldId
+        (field) => field.id === fieldId,
       );
 
       const newIndex = currentIndex + direction;
@@ -905,823 +908,887 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={
-        <div className="min-h-screen bg-slate-100 text-slate-900">
+      <Route
+        path="/"
+        element={
+          <div className="min-h-screen bg-slate-100 text-slate-900">
+            <header className="border-b bg-white px-4 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-xl font-bold text-indigo-600 lg:text-2xl">
+                  FormCraft
+                </h1>
 
-          <header className="border-b bg-white px-4 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="text-xl font-bold text-indigo-600 lg:text-2xl">
-                FormCraft
-              </h1>
+                <input
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  className="w-40 rounded-lg border p-2 sm:w-56"
+                  placeholder="Enter form title"
+                />
 
-              <input
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                className="w-40 rounded-lg border p-2 sm:w-56"
-                placeholder="Enter form title"
-              />
-
-              {/* Mobile Menu Icon */}
-              <button
-                type="button"
-                onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="rounded-lg border p-2 text-xl md:hidden"
-                aria-label="Toggle menu"
-                aria-expanded={isMenuOpen}
-              >
-                {isMenuOpen ? "✕" : "☰"}
-              </button>
-
-              {/* Desktop Buttons */}
-              <div className="hidden items-center gap-3 md:flex">
+                {/* Mobile Menu Icon */}
                 <button
-                  onClick={handleSaveForm}
-                  disabled={isSaving}
-                  className="rounded-lg bg-green-700 px-3 py-2 text-white"
+                  type="button"
+                  onClick={() => setIsMenuOpen((prev) => !prev)}
+                  className="rounded-lg border p-2 text-xl md:hidden"
+                  aria-label="Toggle menu"
+                  aria-expanded={isMenuOpen}
                 >
-                  {isSaving ? "Saving..." : "Save Form"}
+                  {isMenuOpen ? "✕" : "☰"}
                 </button>
 
+                {/* Desktop Buttons */}
+                <div className="hidden items-center gap-3 md:flex">
+                  <button
+                    onClick={handleSaveForm}
+                    disabled={isSaving}
+                    className="rounded-lg bg-green-700 px-3 py-2 text-white"
+                  >
+                    {isSaving ? "Saving..." : "Save Form"}
+                  </button>
 
-                <button
-                  onClick={() => {
-                    handlePublishForm();
-                    setIsMenuOpen(false);
-                  }}
-                  disabled={!formId || isPublishing || formStatus === "published"}
-                  className=" rounded-lg bg-blue-600 px-2 py-2 text-white disabled:opacity-50"
-                >
-                  {isPublishing
-                    ? "Publishing..."
-                    : formStatus === "published"
-                      ? "Published"
-                      : "Publish"}
-                </button>
+                  <button
+                    onClick={() => {
+                      handlePublishForm();
+                      setIsMenuOpen(false);
+                    }}
+                    disabled={
+                      !formId || isPublishing || formStatus === "published"
+                    }
+                    className=" rounded-lg bg-blue-600 px-2 py-2 text-white disabled:opacity-50"
+                  >
+                    {isPublishing
+                      ? "Publishing..."
+                      : formStatus === "published"
+                        ? "Published"
+                        : "Publish"}
+                  </button>
 
+                  <button
+                    onClick={handleNewForm}
+                    className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800"
+                  >
+                    + New Form
+                  </button>
 
-                <button
-                  onClick={handleNewForm}
-                  className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800"
-                >
-                  + New Form
-                </button>
+                  <button
+                    onClick={() => {
+                      setIsPreview((current) => !current);
+                      setSubmittedData(null);
+                    }}
+                    className="rounded-lg border px-4 py-2"
+                  >
+                    {isPreview ? "Back to Builder" : "Preview"}
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setIsPreview((current) => !current);
-                    setSubmittedData(null);
-                  }}
-                  className="rounded-lg border px-4 py-2"
-                >
-                  {isPreview ? "Back to Builder" : "Preview"}
-                </button>
+                  <button
+                    onClick={exportJSON}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
+                  >
+                    Export JSON
+                  </button>
 
-                <button
-                  onClick={exportJSON}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
-                >
-                  Export JSON
-                </button>
-
-                <label htmlFor="import-json" className="cursor-pointer rounded-lg border px-4 py-2 
+                  <label
+                    htmlFor="import-json"
+                    className="cursor-pointer rounded-lg border px-4 py-2 
                  focus-within:outline focus-within:outline-2
   focus-within:outline-indigo-600
   focus-within:outline-offset-2
-                ">
-                  Import JSON
-                  <input
-                    id="import-json"
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={importJSON}
-                    className="sr-only"
-                  />
-                </label>
+                "
+                  >
+                    Import JSON
+                    <input
+                      id="import-json"
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={importJSON}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
               </div>
-            </div>
 
-            {/* Mobile Dropdown Menu */}
-            {isMenuOpen && (
-              <div className="mt-4 flex flex-col gap-2 md:hidden">
-                <button
-                  onClick={() => {
-                    handleSaveForm();
-                    setIsMenuOpen(false);
-                  }}
-                  disabled={isSaving}
-                  className="rounded-lg bg-green-600 px-3 py-2 text-white"
-                >
-                  {isSaving ? "Saving..." : "Save Form"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    handlePublishForm();
-                    setIsMenuOpen(false);
-                  }}
-                  disabled={!formId || isPublishing || formStatus === "published"}
-                  className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
-                >
-                  {isPublishing
-                    ? "Publishing..."
-                    : formStatus === "published"
-                      ? "Published"
-                      : "Publish"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleNewForm();
-                    setIsMenuOpen(false);
-                  }}
-                  className="rounded-lg bg-slate-200 px-4 py-2"
-                >
-                  + New Form
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsPreview((current) => !current);
-                    setSubmittedData(null);
-                    setIsMenuOpen(false);
-                  }}
-                  className="rounded-lg border px-4 py-2"
-                >
-                  {isPreview ? "Back to Builder" : "Preview"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    exportJSON();
-                    setIsMenuOpen(false);
-                  }}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
-                >
-                  Export JSON
-                </button>
-
-                <label
-                  className="cursor-pointer rounded-lg border px-4 py-2 text-center focus-within:outline focus-within:outline-2 focus-within:outline-indigo-600 focus-within:outline-offset-2"
-                >
-                  Import JSON
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(e) => {
-                      importJSON(e);
+              {/* Mobile Dropdown Menu */}
+              {isMenuOpen && (
+                <div className="mt-4 flex flex-col gap-2 md:hidden">
+                  <button
+                    onClick={() => {
+                      handleSaveForm();
                       setIsMenuOpen(false);
                     }}
-                    className="sr-only"
-                  />
-                </label>
-              </div>
-            )}
-
-            {saveMessage && (
-              <p
-                className={`mt-2 text-sm ${saveMessageType === "error"
-                  ? "text-red-500"
-                  : "text-green-600"
-                  }`}
-              >
-                {saveMessage}
-              </p>
-            )}
-
-            {importError && (
-              <p role="alert" className="mt-2 text-sm text-red-600">
-                {importError}
-              </p>
-            )}
-          </header>
-
-
-          <main className="grid min-h-[calc(100vh-73px)] grid-cols-1 sm:p-4 lg:grid-cols-12 gap-4 p-4">
-            <aside
-              aria-label="Field Palette"
-              className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3"
-            >              <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
-
-              <div className="space-y-3">
-                {fieldTypes.map((type) => (
-                  <button
-                    key={type}
-                    draggable
-                    onClick={() => addField(type)}
-                    onDragStart={() => setDraggedFieldType(type)}
-                    onDragEnd={() => setDraggedFieldType(null)}
-                    className="w-full rounded-lg border p-3 text-left hover:border-indigo-500 hover:bg-indigo-50"
+                    disabled={isSaving}
+                    className="rounded-lg bg-green-600 px-3 py-2 text-white"
                   >
-                    + {type}
+                    {isSaving ? "Saving..." : "Save Form"}
                   </button>
-                ))}
-              </div>
-            </aside>
-
-            <section className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-6">
-              <h2 className="mb-4 text-lg font-semibold">
-                {isPreview ? "Form Preview" : "Form Canvas"}
-              </h2>
-
-              {isPreview ? (
-                <form onSubmit={handleSubmit} noValidate className="space-y-4">
-                 
-                  {visibleFields.map((field) => (
-                    <div key={field.id}>
-
-
-                      {renderField(field)}
-                      {field.helpText && (
-                        <p id={`${field.id}-help`} className="mt-1 text-sm text-slate-500">
-                          {field.helpText}
-                        </p>
-                      )}
-                      {errors[field.name]?.length > 0 && (
-                        <p
-                          id={`${field.id}-error`}
-                          className="mt-1 text-sm text-red-600"
-                          role="alert"
-                        >
-                          {errors[field.name].join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  ))}
 
                   <button
-                    type="submit"
+                    onClick={() => {
+                      handlePublishForm();
+                      setIsMenuOpen(false);
+                    }}
+                    disabled={
+                      !formId || isPublishing || formStatus === "published"
+                    }
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
+                  >
+                    {isPublishing
+                      ? "Publishing..."
+                      : formStatus === "published"
+                        ? "Published"
+                        : "Publish"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleNewForm();
+                      setIsMenuOpen(false);
+                    }}
+                    className="rounded-lg bg-slate-200 px-4 py-2"
+                  >
+                    + New Form
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsPreview((current) => !current);
+                      setSubmittedData(null);
+                      setIsMenuOpen(false);
+                    }}
+                    className="rounded-lg border px-4 py-2"
+                  >
+                    {isPreview ? "Back to Builder" : "Preview"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      exportJSON();
+                      setIsMenuOpen(false);
+                    }}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
                   >
-                    Submit
+                    Export JSON
                   </button>
 
-                  {submittedData && (
-                    <pre
-                      tabIndex={0}
-                      className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
-                    >                      {JSON.stringify(submittedData, null, 2)}
-                    </pre>
-                  )}
-                </form>
-              ) : (
-                <div onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
+                  <label className="cursor-pointer rounded-lg border px-4 py-2 text-center focus-within:outline focus-within:outline-2 focus-within:outline-indigo-600 focus-within:outline-offset-2">
+                    Import JSON
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(e) => {
+                        importJSON(e);
+                        setIsMenuOpen(false);
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+              )}
 
-                    if (draggedFieldType) {
-                      addField(draggedFieldType);
-                      setDraggedFieldType(null);
-                    }
-                  }} className="min-h-[500px] space-y-4 rounded-lg border-2 border-dashed border-slate-300 p-4">
-                  {fields.length === 0 ? (
-                    <p className="py-20 text-center text-slate-500">
-                      Add fields here to build your form.
-                    </p>
-                  ) : (
-                    fields.map((field) => (
-                      <div
-                        key={field.id}
-                        tabIndex={0}
+              {saveMessage && (
+                <p
+                  className={`mt-2 text-sm ${saveMessageType === "error"
+                      ? "text-red-500"
+                      : "text-green-600"
+                    }`}
+                >
+                  {saveMessage}
+                </p>
+              )}
 
-                        onKeyDown={(e) => {
-                          if (e.target !== e.currentTarget) return;
+              {importError && (
+                <p role="alert" className="mt-2 text-sm text-red-600">
+                  {importError}
+                </p>
+              )}
+            </header>
 
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedFieldId(field.id);
-                          }
+            <main className="grid min-h-[calc(100vh-73px)] grid-cols-1 sm:p-4 lg:grid-cols-12 gap-4 p-4">
+              <aside
+                aria-label="Field Palette"
+                className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3"
+              >
+                {" "}
+                <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
+                <div className="space-y-3">
+                  {fieldTypes.map((type) => (
+                    <button
+                      key={type}
+                      draggable
+                      onClick={() => addField(type)}
+                      onDragStart={() => setDraggedFieldType(type)}
+                      onDragEnd={() => setDraggedFieldType(null)}
+                      className="w-full rounded-lg border p-3 text-left hover:border-indigo-500 hover:bg-indigo-50"
+                    >
+                      + {type}
+                    </button>
+                  ))}
+                </div>
+              </aside>
 
-                          if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            moveField(field.id, -1);
-                          }
+              <section className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-6">
+                <h2 className="mb-4 text-lg font-semibold">
+                  {isPreview ? "Form Preview" : "Form Canvas"}
+                </h2>
 
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            moveField(field.id, 1);
-                          }
-                        }}
-                        draggable
-                        onDragStart={() => setDraggedFieldId(field.id)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => handleDrop(field.id)}
-                        onDragEnd={() => setDraggedFieldId(null)}
-                        onClick={() => setSelectedFieldId(field.id)}
-
-                        className={`cursor-move rounded-lg border bg-white p-4 ${selectedFieldId === field.id
-                          ? "border-indigo-600 ring-2 ring-indigo-100"
-                          : "border-slate-200"
-                          } ${draggedFieldId === field.id ? "opacity-50" : ""
-                          }`}
-                      >
-                    
-
+                {isPreview ? (
+                  <form
+                    onSubmit={handleSubmit}
+                    noValidate
+                    className="space-y-4"
+                  >
+                    {visibleFields.map((field) => (
+                      <div key={field.id}>
                         {renderField(field)}
                         {field.helpText && (
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p
+                            id={`${field.id}-help`}
+                            className="mt-1 text-sm text-slate-500"
+                          >
                             {field.helpText}
                           </p>
                         )}
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          Type: {field.type} · Name: {field.name}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </section>
-
-
-            <aside className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3">
-
-
-              <div className="mb-5 border-b pb-4">
-                <h2 className="mb-3 text-lg font-semibold">Saved Forms</h2>
-
-                <button
-                  onClick={fetchSavedForms}
-                  className="mb-3 rounded-lg bg-indigo-600 px-3 py-2 text-white"
-                >
-                  Refresh Forms
-                </button>
-
-                <div className="space-y-2">
-                  {savedForms.map((form) => (
-                    <div
-                      key={form._id}
-                      className="flex flex-col items-center justify-between gap-2 rounded-lg border p-2"
-                    >
-                      <span className="text-sm font-bold">{form.title}</span>
-                      <span
-                        className={`text-xs font-medium ${form.status === "published"
-                          ? "text-green-700"
-                          : "text-amber-800"
-                          }`}
-                      >
-                        {form.status || "draft"}
-                      </span>
-                      <div className="flex  gap-2">
-                        <button
-                          onClick={() => handleLoadForm(form._id)}
-                          className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
-                        >
-                          Load
-                        </button>
-
-                        <button
-                          onClick={() => window.open(`/forms/${form._id}`, "_blank")}
-                          className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
-                        >
-                          Open Form
-                        </button>
-
-                        <button
-                          onClick={() => handleCopyLink(form._id)}
-                          className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
-                        >
-                          Copy Link
-                        </button>
-
-                        <button
-                          onClick={() => handleDeleteForm(form._id)}
-                          className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-
-              <h2 className="mb-4 text-lg font-semibold">Properties</h2>
-
-              {!selectedField ? (
-                <p className="text-sm text-slate-500">
-                  Select a field to configure its properties.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-label`} className="mb-1 block text-sm font-medium">
-                      Label
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-label`}
-                      value={selectedField.label}
-                      onChange={(e) =>
-                        updateSelectedField("label", e.target.value)
-                      }
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-name`} className="mb-1 block text-sm font-medium">
-                      Name
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-name`}
-                      value={selectedField.name}
-                      onChange={(e) =>
-                        updateSelectedField("name", e.target.value)
-                      }
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-placeholder`} className="mb-1 block text-sm font-medium">
-                      Placeholder
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-placeholder`}
-                      value={selectedField.placeholder}
-                      onChange={(e) =>
-                        updateSelectedField("placeholder", e.target.value)
-                      }
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-default`} className="mb-1 block text-sm font-medium">
-                      Default Value
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-default`}
-                      value={selectedField.defaultValue ?? ""}
-                      onChange={(e) =>
-                        updateSelectedField("defaultValue", e.target.value)
-                      }
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-help`} className="mb-1 block text-sm font-medium">
-                      Help Text
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-help`}
-                      value={selectedField.helpText ?? ""}
-                      onChange={(e) =>
-                        updateSelectedField("helpText", e.target.value)
-                      }
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-                  <label htmlFor={`${selectedField.id}-property-required`} className="flex items-center gap-2">
-                    <input
-                      id={`${selectedField.id}-property-required`}
-                      type="checkbox"
-                      checked={selectedField.required}
-                      onChange={(e) =>
-                        updateSelectedField("required", e.target.checked)
-                      }
-                    />
-                    Required field
-                  </label>
-
-                  <div className="space-y-3 rounded-lg border p-3">
-                    <h3 className="font-medium">Conditional Logic</h3>
-
-                    <label htmlFor={`${selectedField.id}-condition-field`} className="block text-sm">
-                      Show this field when
-                    </label>
-
-                    <select
-                      id={`${selectedField.id}-condition-field`}
-                      className="w-full rounded-lg border p-2"
-                      value={selectedField.conditions?.[0]?.fieldId || ""}
-                      onChange={(e) => {
-                        const selectedId = e.target.value;
-                        const currentConditions = selectedField.conditions || [];
-
-                        if (!selectedId) {
-                          updateSelectedField(
-                            "conditions",
-                            currentConditions.slice(1)
-                          );
-                          return;
-                        }
-
-                        const updatedConditions = [...currentConditions];
-
-                        if (updatedConditions.length > 0) {
-                          updatedConditions[0] = {
-                            ...updatedConditions[0],
-                            fieldId: selectedId,
-                          };
-                        } else {
-                          updatedConditions.push({
-                            fieldId: selectedId,
-                            operator: "equals",
-                            value: "",
-                          });
-                        }
-
-                        updateSelectedField("conditions", updatedConditions);
-                      }}
-                    >
-                      <option value="">Always show</option>
-                      {fields
-                        .filter((field) => field.id !== selectedField.id)
-                        .map((field) => (
-                          <option key={field.id} value={field.id}>
-                            {field.label}
-                          </option>
-                        ))}
-                    </select>
-
-
-                    {selectedField.conditions?.length > 0 && (
-                      <div className="space-y-3">
-                        <label htmlFor={`${selectedField.id}-condition-match`} className="font-medium">
-                          Match Conditions
-                        </label>
-
-                        {/* AND / OR selection */}
-                        <select
-                          id={`${selectedField.id}-condition-match`}
-                          className="w-full rounded-lg border p-2"
-                          value={selectedField.conditionLogic || "AND"}
-                          onChange={(e) =>
-                            updateSelectedField("conditionLogic", e.target.value)
-                          }
-                        >
-                          <option value="AND">Match ALL conditions (AND)</option>
-                          <option value="OR">Match ANY condition (OR)</option>
-                        </select>
-
-                        {/* Multiple conditions */}
-                        {selectedField.conditions.map((condition, index) => (
-                          <div
-                            key={index}
-                            className="space-y-2 rounded-lg border p-3"
+                        {errors[field.name]?.length > 0 && (
+                          <p
+                            id={`${field.id}-error`}
+                            className="mt-1 text-sm text-red-600"
+                            role="alert"
                           >
-                            <label htmlFor={`${selectedField.id}-condition-${index}`} className="text-sm font-medium">
-                              Condition {index + 1}
-                            </label>
+                            {errors[field.name].join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    ))}
 
-                            {/* Source field */}
-                            <select
-                              id={`${selectedField.id}-condition-${index}`}
-                              className="w-full rounded-lg border p-2"
-                              value={condition.fieldId}
-                              onChange={(e) => {
-                                const updated = [...selectedField.conditions];
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
+                    >
+                      Submit
+                    </button>
 
-                                updated[index] = {
-                                  ...condition,
-                                  fieldId: e.target.value,
-                                };
+                    {submittedData && (
+                      <pre
+                        tabIndex={0}
+                        className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
+                      >
+                        {" "}
+                        {JSON.stringify(submittedData, null, 2)}
+                      </pre>
+                    )}
+                  </form>
+                ) : (
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
 
-                                updateSelectedField("conditions", updated);
-                              }}
+                      if (draggedFieldType) {
+                        addField(draggedFieldType);
+                        setDraggedFieldType(null);
+                      }
+                    }}
+                    className="min-h-[500px] space-y-4 rounded-lg border-2 border-dashed border-slate-300 p-4"
+                  >
+                    {fields.length === 0 ? (
+                      <p className="py-20 text-center text-slate-500">
+                        Add fields here to build your form.
+                      </p>
+                    ) : (
+                      fields.map((field) => (
+                        <div
+                          key={field.id}
+                          tabIndex={0}
+
+                          onKeyDown={(e) => {
+                            if (e.target !== e.currentTarget) return;
+
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedFieldId(field.id);
+                            }
+
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              moveField(field.id, -1);
+                            }
+
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              moveField(field.id, 1);
+                            }
+                          }}
+                          draggable
+                          onDragStart={() => setDraggedFieldId(field.id)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => handleDrop(field.id)}
+                          onDragEnd={() => setDraggedFieldId(null)}
+                          onClick={() => setSelectedFieldId(field.id)}
+
+                          className={`cursor-move rounded-lg border bg-white p-4 ${selectedFieldId === field.id
+                              ? "border-indigo-600 ring-2 ring-indigo-100"
+                              : "border-slate-200"
+                            } ${draggedFieldId === field.id ? "opacity-50" : ""}`}
+                        >
+                          {renderField(field)}
+                          {field.helpText && (
+                            <p className="mt-1 text-sm text-slate-500">
+                              {field.helpText}
+                            </p>
+                          )}
+
+                          <p className="mt-1 text-sm text-slate-500">
+                            Type: {field.type} · Name: {field.name}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </section>
+
+              <aside className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3">
+                <div className="mb-5 border-b pb-4">
+                  <h2 className="mb-3 text-lg font-semibold">Saved Forms</h2>
+
+                  <button
+                    onClick={fetchSavedForms}
+                    className="mb-3 rounded-lg bg-indigo-600 px-3 py-2 text-white"
+                  >
+                    Refresh Forms
+                  </button>
+
+                  <div className="space-y-2">
+                    {savedForms.map((form) => (
+                      <div
+                        key={form._id}
+                        className="flex flex-col items-center justify-between gap-2 rounded-lg border p-2"
+                      >
+                        <span className="text-sm font-bold">{form.title}</span>
+                        <span
+                          className={`text-xs font-medium ${form.status === "published"
+                              ? "text-green-700"
+                              : "text-amber-800"
+                            }`}
+                        >
+                          {form.status || "draft"}
+                        </span>
+                        <div className="flex  gap-2">
+                          <button
+                            onClick={() => handleLoadForm(form._id)}
+                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
+                          >
+                            Load
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              window.open(`/forms/${form._id}`, "_blank")
+                            }
+                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
+                          >
+                            Open Form
+                          </button>
+
+                          <button
+                            onClick={() => handleCopyLink(form._id)}
+                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
+                          >
+                            Copy Link
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteForm(form._id)}
+                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <h2 className="mb-4 text-lg font-semibold">Properties</h2>
+
+                {!selectedField ? (
+                  <p className="text-sm text-slate-500">
+                    Select a field to configure its properties.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-label`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Label
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-label`}
+                        value={selectedField.label}
+                        onChange={(e) =>
+                          updateSelectedField("label", e.target.value)
+                        }
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-name`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Name
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-name`}
+                        value={selectedField.name}
+                        onChange={(e) =>
+                          updateSelectedField("name", e.target.value)
+                        }
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-placeholder`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Placeholder
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-placeholder`}
+                        value={selectedField.placeholder}
+                        onChange={(e) =>
+                          updateSelectedField("placeholder", e.target.value)
+                        }
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-default`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Default Value
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-default`}
+                        value={selectedField.defaultValue ?? ""}
+                        onChange={(e) =>
+                          updateSelectedField("defaultValue", e.target.value)
+                        }
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-help`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Help Text
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-help`}
+                        value={selectedField.helpText ?? ""}
+                        onChange={(e) =>
+                          updateSelectedField("helpText", e.target.value)
+                        }
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
+
+                    <label
+                      htmlFor={`${selectedField.id}-property-required`}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        id={`${selectedField.id}-property-required`}
+                        type="checkbox"
+                        checked={selectedField.required}
+                        onChange={(e) =>
+                          updateSelectedField("required", e.target.checked)
+                        }
+                      />
+                      Required field
+                    </label>
+
+                    <div className="space-y-3 rounded-lg border p-3">
+                      <h3 className="font-medium">Conditional Logic</h3>
+
+                      <label
+                        htmlFor={`${selectedField.id}-condition-field`}
+                        className="block text-sm"
+                      >
+                        Show this field when
+                      </label>
+
+                      <select
+                        id={`${selectedField.id}-condition-field`}
+                        className="w-full rounded-lg border p-2"
+                        value={selectedField.conditions?.[0]?.fieldId || ""}
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          const currentConditions =
+                            selectedField.conditions || [];
+
+                          if (!selectedId) {
+                            updateSelectedField(
+                              "conditions",
+                              currentConditions.slice(1),
+                            );
+                            return;
+                          }
+
+                          const updatedConditions = [...currentConditions];
+
+                          if (updatedConditions.length > 0) {
+                            updatedConditions[0] = {
+                              ...updatedConditions[0],
+                              fieldId: selectedId,
+                            };
+                          } else {
+                            updatedConditions.push({
+                              fieldId: selectedId,
+                              operator: "equals",
+                              value: "",
+                            });
+                          }
+
+                          updateSelectedField("conditions", updatedConditions);
+                        }}
+                      >
+                        <option value="">Always show</option>
+                        {fields
+                          .filter((field) => field.id !== selectedField.id)
+                          .map((field) => (
+                            <option key={field.id} value={field.id}>
+                              {field.label}
+                            </option>
+                          ))}
+                      </select>
+
+                      {selectedField.conditions?.length > 0 && (
+                        <div className="space-y-3">
+                          <label
+                            htmlFor={`${selectedField.id}-condition-match`}
+                            className="font-medium"
+                          >
+                            Match Conditions
+                          </label>
+
+                          {/* AND / OR selection */}
+                          <select
+                            id={`${selectedField.id}-condition-match`}
+                            className="w-full rounded-lg border p-2"
+                            value={selectedField.conditionLogic || "AND"}
+                            onChange={(e) =>
+                              updateSelectedField(
+                                "conditionLogic",
+                                e.target.value,
+                              )
+                            }
+                          >
+                            <option value="AND">
+                              Match ALL conditions (AND)
+                            </option>
+                            <option value="OR">Match ANY condition (OR)</option>
+                          </select>
+
+                          {/* Multiple conditions */}
+                          {selectedField.conditions.map((condition, index) => (
+                            <div
+                              key={index}
+                              className="space-y-2 rounded-lg border p-3"
                             >
-                              <option value="">Select field</option>
+                              <label
+                                htmlFor={`${selectedField.id}-condition-${index}`}
+                                className="text-sm font-medium"
+                              >
+                                Condition {index + 1}
+                              </label>
 
-                              {fields
-                                .filter((field) => field.id !== selectedField.id)
-                                .map((field) => (
-                                  <option key={field.id} value={field.id}>
-                                    {field.label}
-                                  </option>
-                                ))}
-                            </select>
-
-                            {/* Operator */}
-                            <select
-                              id={`${selectedField.id}-condition-operator-${index}`}
-                              aria-label={`Condition ${index + 1} operator`}
-                              className="w-full rounded-lg border p-2"
-                              value={condition.operator}
-                              onChange={(e) => {
-                                const updated = [...selectedField.conditions];
-
-                                updated[index] = {
-                                  ...condition,
-                                  operator: e.target.value,
-                                };
-
-                                updateSelectedField("conditions", updated);
-                              }}
-                            >
-                              <option value="equals">Equals</option>
-                              <option value="notEquals">Does not equal</option>
-                              <option value="contains">Contains</option>
-                              <option value="greaterThan">Greater than</option>
-                              <option value="lessThan">Less than</option>
-                              <option value="isEmpty">Is empty</option>
-                            </select>
-
-                            {/* Comparison value */}
-                            {condition.operator !== "isEmpty" && (
-                              <input
-                                id={`${selectedField.id}-condition-value-${index}`}
-                                aria-label={`Condition ${index + 1} comparison value`}
+                              {/* Source field */}
+                              <select
+                                id={`${selectedField.id}-condition-${index}`}
                                 className="w-full rounded-lg border p-2"
-                                placeholder="Comparison value"
-                                value={condition.value ?? ""}
+                                value={condition.fieldId}
                                 onChange={(e) => {
                                   const updated = [...selectedField.conditions];
 
                                   updated[index] = {
                                     ...condition,
-                                    value: e.target.value,
+                                    fieldId: e.target.value,
                                   };
 
                                   updateSelectedField("conditions", updated);
                                 }}
-                              />
-                            )}
+                              >
+                                <option value="">Select field</option>
 
-                            {/* Remove condition */}
-                            <button
-                              type="button"
-                              className="text-sm text-red-600"
-                              onClick={() =>
-                                updateSelectedField(
-                                  "conditions",
-                                  selectedField.conditions.filter(
-                                    (_, i) => i !== index
+                                {fields
+                                  .filter(
+                                    (field) => field.id !== selectedField.id,
                                   )
-                                )
-                              }
+                                  .map((field) => (
+                                    <option key={field.id} value={field.id}>
+                                      {field.label}
+                                    </option>
+                                  ))}
+                              </select>
+
+                              {/* Operator */}
+                              <select
+                                id={`${selectedField.id}-condition-operator-${index}`}
+                                aria-label={`Condition ${index + 1} operator`}
+                                className="w-full rounded-lg border p-2"
+                                value={condition.operator}
+                                onChange={(e) => {
+                                  const updated = [...selectedField.conditions];
+
+                                  updated[index] = {
+                                    ...condition,
+                                    operator: e.target.value,
+                                  };
+
+                                  updateSelectedField("conditions", updated);
+                                }}
+                              >
+                                <option value="equals">Equals</option>
+                                <option value="notEquals">
+                                  Does not equal
+                                </option>
+                                <option value="contains">Contains</option>
+                                <option value="greaterThan">
+                                  Greater than
+                                </option>
+                                <option value="lessThan">Less than</option>
+                                <option value="isEmpty">Is empty</option>
+                              </select>
+
+                              {/* Comparison value */}
+                              {condition.operator !== "isEmpty" && (
+                                <input
+                                  id={`${selectedField.id}-condition-value-${index}`}
+                                  aria-label={`Condition ${index + 1} comparison value`}
+                                  className="w-full rounded-lg border p-2"
+                                  placeholder="Comparison value"
+                                  value={condition.value ?? ""}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...selectedField.conditions,
+                                    ];
+
+                                    updated[index] = {
+                                      ...condition,
+                                      value: e.target.value,
+                                    };
+
+                                    updateSelectedField("conditions", updated);
+                                  }}
+                                />
+                              )}
+
+                              {/* Remove condition */}
+                              <button
+                                type="button"
+                                className="text-sm text-red-600"
+                                onClick={() =>
+                                  updateSelectedField(
+                                    "conditions",
+                                    selectedField.conditions.filter(
+                                      (_, i) => i !== index,
+                                    ),
+                                  )
+                                }
+                              >
+                                Remove Condition
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* Add condition */}
+                          <button
+                            type="button"
+                            className="w-full rounded-lg border p-2 text-sm"
+                            onClick={() =>
+                              updateSelectedField("conditions", [
+                                ...selectedField.conditions,
+                                {
+                                  fieldId: "",
+                                  operator: "equals",
+                                  value: "",
+                                },
+                              ])
+                            }
+                          >
+                            + Add Condition
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {["Text", "Textarea", "Email"].includes(
+                      selectedField.type,
+                    ) && (
+                        <>
+                          <div>
+                            <label
+                              htmlFor={`${selectedField.id}-property-min-length`}
+                              className="mb-1 block text-sm font-medium"
                             >
-                              Remove Condition
-                            </button>
+                              Minimum Length
+                            </label>
+                            <input
+                              id={`${selectedField.id}-property-min-length`}
+                              type="number"
+                              min="0"
+                              value={selectedField.minLength ?? ""}
+                              onChange={(e) =>
+                                updateSelectedField("minLength", e.target.value)
+                              }
+                              className="w-full rounded-lg border p-2"
+                            />
                           </div>
-                        ))}
 
-                        {/* Add condition */}
-                        <button
-                          type="button"
-                          className="w-full rounded-lg border p-2 text-sm"
-                          onClick={() =>
-                            updateSelectedField("conditions", [
-                              ...selectedField.conditions,
-                              {
-                                fieldId: "",
-                                operator: "equals",
-                                value: "",
-                              },
-                            ])
-                          }
-                        >
-                          + Add Condition
-                        </button>
-                      </div>
+                          <div>
+                            <label
+                              htmlFor={`${selectedField.id}-property-max-length`}
+                              className="mb-1 block text-sm font-medium"
+                            >
+                              Maximum Length
+                            </label>
+                            <input
+                              id={`${selectedField.id}-property-max-length`}
+                              type="number"
+                              min="0"
+                              value={selectedField.maxLength ?? ""}
+                              onChange={(e) =>
+                                updateSelectedField("maxLength", e.target.value)
+                              }
+                              className="w-full rounded-lg border p-2"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`${selectedField.id}-property-pattern`}
+                              className="mb-1 block text-sm font-medium"
+                            >
+                              Regex Pattern
+                            </label>
+                            <input
+                              id={`${selectedField.id}-property-pattern`}
+                              value={selectedField.pattern ?? ""}
+                              onChange={(e) =>
+                                updateSelectedField("pattern", e.target.value)
+                              }
+                              placeholder="Example: ^[A-Za-z]+$"
+                              className="w-full rounded-lg border p-2"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                    {selectedField.type === "Number" && (
+                      <>
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-property-min-value`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Minimum Value
+                          </label>
+                          <input
+                            id={`${selectedField.id}-property-min-value`}
+                            type="number"
+                            value={selectedField.minValue ?? ""}
+                            onChange={(e) =>
+                              updateSelectedField("minValue", e.target.value)
+                            }
+                            className="w-full rounded-lg border p-2"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-property-max-value`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Maximum Value
+                          </label>
+                          <input
+                            id={`${selectedField.id}-property-max-value`}
+                            type="number"
+                            value={selectedField.maxValue ?? ""}
+                            onChange={(e) =>
+                              updateSelectedField("maxValue", e.target.value)
+                            }
+                            className="w-full rounded-lg border p-2"
+                          />
+                        </div>
+                      </>
                     )}
 
+                    <div>
+                      <label
+                        htmlFor={`${selectedField.id}-property-custom-error`}
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        Custom Error Message
+                      </label>
+                      <input
+                        id={`${selectedField.id}-property-custom-error`}
+                        value={selectedField.errorMessage ?? ""}
+                        onChange={(e) =>
+                          updateSelectedField("errorMessage", e.target.value)
+                        }
+                        placeholder="Please enter a valid value"
+                        className="w-full rounded-lg border p-2"
+                      />
+                    </div>
 
+                    {(selectedField.type === "Select" ||
+                      selectedField.type === "Radio Group") && (
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-radio-options`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Options
+                          </label>
+
+                          <textarea
+                            id={`${selectedField.id}-radio-options`}
+                            value={(selectedField.options || []).join("\n")}
+                            onChange={(e) =>
+                              updateSelectedField(
+                                "options",
+                                e.target.value.split("\n"),
+                              )
+                            }
+                            rows={4}
+                            className="w-full rounded-lg border p-2"
+                            placeholder={"India\nUSA\nCanada"}
+                          />
+                        </div>
+                      )}
+
+                    <button
+                      onClick={deleteSelectedField}
+                      className="w-full rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100"
+                    >
+                      Delete Field
+                    </button>
                   </div>
-
-                  {["Text", "Textarea", "Email"].includes(selectedField.type) && (
-                    <>
-                      <div>
-                        <label htmlFor={`${selectedField.id}-property-min-length`} className="mb-1 block text-sm font-medium">
-                          Minimum Length
-                        </label>
-                        <input
-                          id={`${selectedField.id}-property-min-length`}
-                          type="number"
-                          min="0"
-                          value={selectedField.minLength ?? ""}
-                          onChange={(e) =>
-                            updateSelectedField("minLength", e.target.value)
-                          }
-                          className="w-full rounded-lg border p-2"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`${selectedField.id}-property-max-length`} className="mb-1 block text-sm font-medium">
-                          Maximum Length
-                        </label>
-                        <input
-                          id={`${selectedField.id}-property-max-length`}
-                          type="number"
-                          min="0"
-                          value={selectedField.maxLength ?? ""}
-                          onChange={(e) =>
-                            updateSelectedField("maxLength", e.target.value)
-                          }
-                          className="w-full rounded-lg border p-2"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor={`${selectedField.id}-property-pattern`} className="mb-1 block text-sm font-medium">
-                          Regex Pattern
-                        </label>
-                        <input
-                          id={`${selectedField.id}-property-pattern`}
-                          value={selectedField.pattern ?? ""}
-                          onChange={(e) =>
-                            updateSelectedField("pattern", e.target.value)
-                          }
-                          placeholder="Example: ^[A-Za-z]+$"
-                          className="w-full rounded-lg border p-2"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {selectedField.type === "Number" && (
-                    <>
-                      <div>
-                        <label htmlFor={`${selectedField.id}-property-min-value`} className="mb-1 block text-sm font-medium">
-                          Minimum Value
-                        </label>
-                        <input
-                          id={`${selectedField.id}-property-min-value`}
-                          type="number"
-                          value={selectedField.minValue ?? ""}
-                          onChange={(e) =>
-                            updateSelectedField("minValue", e.target.value)
-                          }
-                          className="w-full rounded-lg border p-2"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`${selectedField.id}-property-max-value`} className="mb-1 block text-sm font-medium">
-                          Maximum Value
-                        </label>
-                        <input
-                          id={`${selectedField.id}-property-max-value`}
-                          type="number"
-                          value={selectedField.maxValue ?? ""}
-                          onChange={(e) =>
-                            updateSelectedField("maxValue", e.target.value)
-                          }
-                          className="w-full rounded-lg border p-2"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div>
-                    <label htmlFor={`${selectedField.id}-property-custom-error`} className="mb-1 block text-sm font-medium">
-                      Custom Error Message
-                    </label>
-                    <input
-                      id={`${selectedField.id}-property-custom-error`}
-                      value={selectedField.errorMessage ?? ""}
-                      onChange={(e) =>
-                        updateSelectedField("errorMessage", e.target.value)
-                      }
-                      placeholder="Please enter a valid value"
-                      className="w-full rounded-lg border p-2"
-                    />
-                  </div>
-
-
-
-
-
-
-                  {(selectedField.type === "Select" ||
-                    selectedField.type === "Radio Group") && (
-                      <div>
-                        <label htmlFor={`${selectedField.id}-radio-options`} className="mb-1 block text-sm font-medium">
-                          Options
-                        </label>
-
-                        <textarea
-                          id={`${selectedField.id}-radio-options`}
-                          value={(selectedField.options || []).join("\n")}
-                          onChange={(e) =>
-                            updateSelectedField(
-                              "options",
-                              e.target.value.split("\n")
-                            )
-                          }
-                          rows={4}
-                          className="w-full rounded-lg border p-2"
-                          placeholder={"India\nUSA\nCanada"}
-                        />
-                      </div>
-                    )}
-
-
-                  <button
-                    onClick={deleteSelectedField}
-                    className="w-full rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                  >
-                    Delete Field
-                  </button>
-                </div>
-              )}
-            </aside>
-          </main>
-        </div>
-      } />
+                )}
+              </aside>
+            </main>
+          </div>
+        }
+      />
       <Route path="/forms/:id" element={<FormRenderer />} />
     </Routes>
   );

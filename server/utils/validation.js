@@ -1,12 +1,32 @@
 import safeRegex from "safe-regex2";
+export function validatePattern(pattern) {
+  if (!pattern) return null;
+
+  if (pattern.length > 100) {
+    return "Validation pattern is too long.";
+  }
+
+  try {
+    const regex = new RegExp(pattern);
+
+    if (!safeRegex(regex)) {
+      return "This validation pattern is not safe.";
+    }
+  } catch {
+    return "The configured validation pattern is invalid.";
+  }
+
+  return null;
+}
 export function validateField(field, value) {
   const errors = [];
   const empty =
-    value === undefined ||
-    value === null ||
-    String(value).trim() === "";
+    value === undefined || value === null || String(value).trim() === "";
 
-  if (field.required && (empty || (field.type === "Checkbox" && value !== true))) {
+  if (
+    field.required &&
+    (empty || (field.type === "Checkbox" && value !== true))
+  ) {
     errors.push(field.errorMessage || "This field is required.");
     return errors;
   }
@@ -21,9 +41,7 @@ export function validateField(field, value) {
     field.minLength != null &&
     text.length < Number(field.minLength)
   ) {
-    errors.push(
-      `Minimum length is ${field.minLength}.`
-    );
+    errors.push(`Minimum length is ${field.minLength}.`);
   }
 
   if (
@@ -31,9 +49,7 @@ export function validateField(field, value) {
     field.maxLength != null &&
     text.length > Number(field.maxLength)
   ) {
-    errors.push(
-      `Maximum length is ${field.maxLength}.`
-    );
+    errors.push(`Maximum length is ${field.maxLength}.`);
   }
 
   if (field.type === "Number") {
@@ -44,9 +60,7 @@ export function validateField(field, value) {
       field.minValue != null &&
       number < Number(field.minValue)
     ) {
-      errors.push(
-        `Minimum value is ${field.minValue}.`
-      );
+      errors.push(`Minimum value is ${field.minValue}.`);
     }
 
     if (
@@ -54,9 +68,7 @@ export function validateField(field, value) {
       field.maxValue != null &&
       number > Number(field.maxValue)
     ) {
-      errors.push(
-        `Maximum value is ${field.maxValue}.`
-      );
+      errors.push(`Maximum value is ${field.maxValue}.`);
     }
   }
 
@@ -78,7 +90,7 @@ export function validateField(field, value) {
         if (!safeRegex(regex)) {
           errors.push("This validation pattern is not safe.");
         } else if (!regex.test(text)) {
-          errors.push("Value format is invalid.");
+          errors.push(field.errorMessage || "Value format is invalid.");
         }
       }
     } catch {

@@ -1,4 +1,3 @@
-
 const API_URL = import.meta.env.VITE_API_URL;
 export async function apiRequest(endpoint, options = {}) {
   let response;
@@ -12,9 +11,7 @@ export async function apiRequest(endpoint, options = {}) {
       ...options,
     });
   } catch {
-    throw new Error(
-      "Unable to connect to the server. Please try again later."
-    );
+    throw new Error("Unable to connect to the server. Please try again later.");
   }
 
   let data;
@@ -27,7 +24,7 @@ export async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = new Error(
-      data.message || "Something went wrong. Please try again."
+      data.message || "Something went wrong. Please try again.",
     );
 
     error.status = response.status;

@@ -11,7 +11,7 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 - Field validation, including required fields, email, length, number, and regex validation.
 - Import and export forms using JSON.
 - Save, load, update, and delete forms.
--Preview forms and submit responses through published forms.
+  -Preview forms and submit responses through published forms.
 - Responsive design for desktop and mobile.
 
 ## Tech Stack
@@ -20,9 +20,10 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 
 **Backend:** Node.js, Express.js, MongoDB, Mongoose
 
-## Installation and Setup  
+## Installation and Setup
 
 ### Prerequisites
+
 - Node.js and npm
 - MongoDB
 
@@ -57,6 +58,7 @@ Create a `.env` file and add:
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
+FRONTEND_URL=http://localhost:5173
 ```
 
 Start the backend:

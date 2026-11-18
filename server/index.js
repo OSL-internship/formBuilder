@@ -5,8 +5,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Form from "./models/Form.js";
 import Response from "./models/Response.js";
-import { isFieldVisible } from "./utils/conditions.js";
-import { validateField } from "./utils/validation.js";
+import {getVisibleFields } from "./utils/conditions.js";
+import {
+  validateField, validatePattern
+} from "./utils/validation.js";
 
 dotenv.config();
 
@@ -14,7 +16,6 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
-
 
 // Test route
 app.get("/api/abc", (req, res) => {
@@ -26,15 +27,23 @@ app.post("/api/forms", async (req, res) => {
   try {
     const { title, fields } = req.body;
 
-    if (
-      typeof title !== "string" ||
-      !title.trim() ||
-      !Array.isArray(fields)
-    ) {
+    if (typeof title !== "string" || !title.trim() || !Array.isArray(fields)) {
       return res.status(400).json({
         message: "A valid title and fields array are required.",
       });
     }
+
+    for (const field of fields) {
+      const patternError = validatePattern(field.pattern);
+
+      if (patternError) {
+        return res.status(400).json({
+          message: patternError,
+          field: field.name,
+        });
+      }
+    }
+
     const form = await Form.create({
       title: title.trim(),
       fields,
@@ -53,10 +62,6 @@ app.post("/api/forms", async (req, res) => {
   }
 });
 
-
-
-
-
 /* Update form */
 app.put("/api/forms/:id", async (req, res) => {
   try {
@@ -69,15 +74,23 @@ app.put("/api/forms/:id", async (req, res) => {
       });
     }
 
-    if (
-      typeof title !== "string" ||
-      !title.trim() ||
-      !Array.isArray(fields)
-    ) {
+    if (typeof title !== "string" || !title.trim() || !Array.isArray(fields)) {
       return res.status(400).json({
         message: "A valid title and fields array are required.",
       });
     }
+
+for (const field of fields) {
+  const patternError = validatePattern(field.pattern);
+
+  if (patternError) {
+    return res.status(400).json({
+      message: patternError,
+      field: field.name,
+    });
+  }
+}
+
 
     const form = await Form.findByIdAndUpdate(
       id,
@@ -88,7 +101,7 @@ app.put("/api/forms/:id", async (req, res) => {
       {
         new: true,
         runValidators: true,
-      }
+      },
     );
 
     if (!form) {
@@ -110,8 +123,6 @@ app.put("/api/forms/:id", async (req, res) => {
   }
 });
 
-
-
 /* Get all saved forms */
 app.get("/api/forms", async (req, res) => {
   try {
@@ -128,7 +139,6 @@ app.get("/api/forms", async (req, res) => {
     });
   }
 });
-
 
 /* Get one form by ID */
 app.get("/api/forms/:id", async (req, res) => {
@@ -157,9 +167,6 @@ app.get("/api/forms/:id", async (req, res) => {
   }
 });
 
-
-
-
 /* Submit form response */
 app.post("/api/forms/:id/submit", async (req, res) => {
   try {
@@ -187,19 +194,14 @@ app.post("/api/forms/:id/submit", async (req, res) => {
 
     if (
       !_formUpdatedAt ||
-      new Date(_formUpdatedAt).getTime() !==
-      new Date(form.updatedAt).getTime()
+      new Date(_formUpdatedAt).getTime() !== new Date(form.updatedAt).getTime()
     ) {
       return res.status(409).json({
         message: "This form was updated. Please reload and try again.",
       });
     }
 
-    if (
-      !answers ||
-      typeof answers !== "object" ||
-      Array.isArray(answers)
-    ) {
+    if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
       return res.status(400).json({
         message: "Invalid form answers.",
       });
@@ -207,15 +209,13 @@ app.post("/api/forms/:id/submit", async (req, res) => {
 
     const errors = {};
 
-    const visibleFields = form.fields.filter((field) =>
-      isFieldVisible(field, form.fields, answers)
-    );
+    const visibleFields = getVisibleFields(form.fields, answers);
 
     visibleFields.forEach((field) => {
       const value =
         answers[field.name] !== undefined
           ? answers[field.name]
-          : field.defaultValue ?? "";
+          : (field.defaultValue ?? "");
       const fieldErrors = validateField(field, value);
 
       if (fieldErrors.length > 0) {
@@ -233,12 +233,10 @@ app.post("/api/forms/:id/submit", async (req, res) => {
     const submittedAnswers = {};
 
     visibleFields.forEach((field) => {
-      if (answers[field.name] !== undefined) {
-        submittedAnswers[field.name] =
-          answers[field.name] !== undefined
-            ? answers[field.name]
-            : field.defaultValue ?? "";
-      }
+      submittedAnswers[field.name] =
+        answers[field.name] !== undefined
+          ? answers[field.name]
+          : (field.defaultValue ?? "");
     });
 
     const response = await Response.create({
@@ -258,7 +256,6 @@ app.post("/api/forms/:id/submit", async (req, res) => {
     });
   }
 });
-
 
 /* Get form responses */
 app.get("/api/forms/:id/responses", async (req, res) => {
@@ -282,7 +279,6 @@ app.get("/api/forms/:id/responses", async (req, res) => {
     });
   }
 });
-
 
 app.delete("/api/forms/:id", async (req, res) => {
   try {
@@ -314,7 +310,6 @@ app.delete("/api/forms/:id", async (req, res) => {
   }
 });
 
-
 /* Publish form */
 app.patch("/api/forms/:id/publish", async (req, res) => {
   try {
@@ -329,7 +324,7 @@ app.patch("/api/forms/:id/publish", async (req, res) => {
     const form = await Form.findByIdAndUpdate(
       id,
       { status: "published" },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!form) {
@@ -351,7 +346,6 @@ app.patch("/api/forms/:id/publish", async (req, res) => {
     });
   }
 });
-
 
 /* Get published form for renderer */
 app.get("/api/forms/:id/published", async (req, res) => {
@@ -388,8 +382,6 @@ app.get("/api/forms/:id/published", async (req, res) => {
   }
 });
 
-
-
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
@@ -407,6 +399,3 @@ async function startServer() {
 }
 
 startServer();
-
-
-

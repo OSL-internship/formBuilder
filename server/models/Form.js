@@ -23,7 +23,7 @@ const conditionSchema = new mongoose.Schema(
       default: "",
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const fieldSchema = new mongoose.Schema(
@@ -110,7 +110,7 @@ const fieldSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { _id: false, id: false }
+  { _id: false, id: false },
 );
 
 const formSchema = new mongoose.Schema(
@@ -130,10 +130,9 @@ const formSchema = new mongoose.Schema(
       default: "draft",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Form = mongoose.model("Form", formSchema);
 
 export default Form;
-
