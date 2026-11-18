@@ -17,9 +17,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "state",
-        conditions: [
-          { fieldId: "1", operator: "equals", value: "India" },
-        ],
+        conditions: [{ fieldId: "1", operator: "equals", value: "India" }],
       },
     ];
 
@@ -32,9 +30,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "state",
-        conditions: [
-          { fieldId: "1", operator: "equals", value: "India" },
-        ],
+        conditions: [{ fieldId: "1", operator: "equals", value: "India" }],
       },
     ];
 
@@ -47,9 +43,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "state",
-        conditions: [
-          { fieldId: "1", operator: "notEquals", value: "USA" },
-        ],
+        conditions: [{ fieldId: "1", operator: "notEquals", value: "USA" }],
       },
     ];
 
@@ -68,7 +62,9 @@ describe("getVisibleFields", () => {
       },
     ];
 
-    expect(getVisibleFields(fields, { city: "Prayagraj Allahabad" })).toHaveLength(2);
+    expect(
+      getVisibleFields(fields, { city: "Prayagraj Allahabad" }),
+    ).toHaveLength(2);
   });
 
   it("should support contains for array values", () => {
@@ -77,13 +73,13 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "experience",
-        conditions: [
-          { fieldId: "1", operator: "contains", value: "React" },
-        ],
+        conditions: [{ fieldId: "1", operator: "contains", value: "React" }],
       },
     ];
 
-    expect(getVisibleFields(fields, { skills: ["React", "Node"] })).toHaveLength(2);
+    expect(
+      getVisibleFields(fields, { skills: ["React", "Node"] }),
+    ).toHaveLength(2);
   });
 
   it("should support greaterThan and lessThan conditions", () => {
@@ -92,16 +88,12 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "adult",
-        conditions: [
-          { fieldId: "1", operator: "greaterThan", value: 18 },
-        ],
+        conditions: [{ fieldId: "1", operator: "greaterThan", value: 18 }],
       },
       {
         id: "3",
         name: "minor",
-        conditions: [
-          { fieldId: "1", operator: "lessThan", value: 18 },
-        ],
+        conditions: [{ fieldId: "1", operator: "lessThan", value: 18 }],
       },
     ];
 
@@ -117,9 +109,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "adult",
-        conditions: [
-          { fieldId: "1", operator: "greaterThan", value: 18 },
-        ],
+        conditions: [{ fieldId: "1", operator: "greaterThan", value: 18 }],
       },
     ];
 
@@ -132,9 +122,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "details",
-        conditions: [
-          { fieldId: "1", operator: "isEmpty" },
-        ],
+        conditions: [{ fieldId: "1", operator: "isEmpty" }],
       },
     ];
 
@@ -207,9 +195,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "city",
-        conditions: [
-          { fieldId: "1", operator: "isEmpty" },
-        ],
+        conditions: [{ fieldId: "1", operator: "isEmpty" }],
       },
     ];
 
@@ -222,16 +208,12 @@ describe("getVisibleFields", () => {
       {
         id: "1",
         name: "country",
-        conditions: [
-          { fieldId: "2", operator: "equals", value: "India" },
-        ],
+        conditions: [{ fieldId: "2", operator: "equals", value: "India" }],
       },
       {
         id: "2",
         name: "state",
-        conditions: [
-          { fieldId: "1", operator: "equals", value: "UP" },
-        ],
+        conditions: [{ fieldId: "1", operator: "equals", value: "UP" }],
       },
     ];
 
@@ -244,9 +226,7 @@ describe("getVisibleFields", () => {
       {
         id: "2",
         name: "state",
-        conditions: [
-          { fieldId: "1", operator: "unknown", value: "India" },
-        ],
+        conditions: [{ fieldId: "1", operator: "unknown", value: "India" }],
       },
     ];
 

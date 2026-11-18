@@ -82,18 +82,18 @@ export function validateField(field, value) {
   }
 
   if (field.pattern) {
-  const patternError = validatePattern(field.pattern);
+    const patternError = validatePattern(field.pattern);
 
-  if (patternError) {
-    errors.push(patternError);
-  } else {
-    const regex = new RegExp(field.pattern);
+    if (patternError) {
+      errors.push(patternError);
+    } else {
+      const regex = new RegExp(field.pattern);
 
-    if (!regex.test(text)) {
-      errors.push(field.errorMessage || "Value format is invalid.");
+      if (!regex.test(text)) {
+        errors.push(field.errorMessage || "Value format is invalid.");
+      }
     }
   }
-}
 
   return errors;
 }

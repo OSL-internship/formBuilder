@@ -65,7 +65,6 @@
 //     : field.conditions.every(checkCondition);
 // }
 
-
 export function getVisibleFields(fields, values) {
   const fieldMap = new Map(fields.map((field) => [field.id, field]));
   const visibilityCache = new Map();

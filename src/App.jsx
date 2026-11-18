@@ -291,9 +291,9 @@ function App() {
                 checked={
                   formValues[field.name] !== undefined
                     ? formValues[field.name] === true ||
-                    formValues[field.name] === "true"
+                      formValues[field.name] === "true"
                     : field.defaultValue === true ||
-                    field.defaultValue === "true"
+                      field.defaultValue === "true"
                 }
                 required={field.required}
                 aria-invalid={errors[field.name]?.length > 0}
@@ -1086,10 +1086,11 @@ function App() {
 
               {saveMessage && (
                 <p
-                  className={`mt-2 text-sm ${saveMessageType === "error"
+                  className={`mt-2 text-sm ${
+                    saveMessageType === "error"
                       ? "text-red-500"
                       : "text-green-600"
-                    }`}
+                  }`}
                 >
                   {saveMessage}
                 </p>
@@ -1224,10 +1225,11 @@ function App() {
                           onDragEnd={() => setDraggedFieldId(null)}
                           onClick={() => setSelectedFieldId(field.id)}
 
-                          className={`cursor-move rounded-lg border bg-white p-4 ${selectedFieldId === field.id
+                          className={`cursor-move rounded-lg border bg-white p-4 ${
+                            selectedFieldId === field.id
                               ? "border-indigo-600 ring-2 ring-indigo-100"
                               : "border-slate-200"
-                            } ${draggedFieldId === field.id ? "opacity-50" : ""}`}
+                          } ${draggedFieldId === field.id ? "opacity-50" : ""}`}
                         >
                           {renderField(field)}
                           {field.helpText && (
@@ -1265,10 +1267,11 @@ function App() {
                       >
                         <span className="text-sm font-bold">{form.title}</span>
                         <span
-                          className={`text-xs font-medium ${form.status === "published"
+                          className={`text-xs font-medium ${
+                            form.status === "published"
                               ? "text-green-700"
                               : "text-amber-800"
-                            }`}
+                          }`}
                         >
                           {form.status || "draft"}
                         </span>
@@ -1634,63 +1637,63 @@ function App() {
                     {["Text", "Textarea", "Email"].includes(
                       selectedField.type,
                     ) && (
-                        <>
-                          <div>
-                            <label
-                              htmlFor={`${selectedField.id}-property-min-length`}
-                              className="mb-1 block text-sm font-medium"
-                            >
-                              Minimum Length
-                            </label>
-                            <input
-                              id={`${selectedField.id}-property-min-length`}
-                              type="number"
-                              min="0"
-                              value={selectedField.minLength ?? ""}
-                              onChange={(e) =>
-                                updateSelectedField("minLength", e.target.value)
-                              }
-                              className="w-full rounded-lg border p-2"
-                            />
-                          </div>
+                      <>
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-property-min-length`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Minimum Length
+                          </label>
+                          <input
+                            id={`${selectedField.id}-property-min-length`}
+                            type="number"
+                            min="0"
+                            value={selectedField.minLength ?? ""}
+                            onChange={(e) =>
+                              updateSelectedField("minLength", e.target.value)
+                            }
+                            className="w-full rounded-lg border p-2"
+                          />
+                        </div>
 
-                          <div>
-                            <label
-                              htmlFor={`${selectedField.id}-property-max-length`}
-                              className="mb-1 block text-sm font-medium"
-                            >
-                              Maximum Length
-                            </label>
-                            <input
-                              id={`${selectedField.id}-property-max-length`}
-                              type="number"
-                              min="0"
-                              value={selectedField.maxLength ?? ""}
-                              onChange={(e) =>
-                                updateSelectedField("maxLength", e.target.value)
-                              }
-                              className="w-full rounded-lg border p-2"
-                            />
-                          </div>
-                          <div>
-                            <label
-                              htmlFor={`${selectedField.id}-property-pattern`}
-                              className="mb-1 block text-sm font-medium"
-                            >
-                              Regex Pattern
-                            </label>
-                            <input
-                              id={`${selectedField.id}-property-pattern`}
-                              value={selectedField.pattern ?? ""}
-                              onChange={(e) =>
-                                updateSelectedField("pattern", e.target.value)
-                              }
-                              placeholder="Example: ^[A-Za-z]+$"
-                              className="w-full rounded-lg border p-2"
-                            />
-                          </div>
-                        </>
-                      )}
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-property-max-length`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Maximum Length
+                          </label>
+                          <input
+                            id={`${selectedField.id}-property-max-length`}
+                            type="number"
+                            min="0"
+                            value={selectedField.maxLength ?? ""}
+                            onChange={(e) =>
+                              updateSelectedField("maxLength", e.target.value)
+                            }
+                            className="w-full rounded-lg border p-2"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`${selectedField.id}-property-pattern`}
+                            className="mb-1 block text-sm font-medium"
+                          >
+                            Regex Pattern
+                          </label>
+                          <input
+                            id={`${selectedField.id}-property-pattern`}
+                            value={selectedField.pattern ?? ""}
+                            onChange={(e) =>
+                              updateSelectedField("pattern", e.target.value)
+                            }
+                            placeholder="Example: ^[A-Za-z]+$"
+                            className="w-full rounded-lg border p-2"
+                          />
+                        </div>
+                      </>
+                    )}
 
                     {selectedField.type === "Number" && (
                       <>
@@ -1752,29 +1755,29 @@ function App() {
 
                     {(selectedField.type === "Select" ||
                       selectedField.type === "Radio Group") && (
-                        <div>
-                          <label
-                            htmlFor={`${selectedField.id}-radio-options`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Options
-                          </label>
+                      <div>
+                        <label
+                          htmlFor={`${selectedField.id}-radio-options`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Options
+                        </label>
 
-                          <textarea
-                            id={`${selectedField.id}-radio-options`}
-                            value={(selectedField.options || []).join("\n")}
-                            onChange={(e) =>
-                              updateSelectedField(
-                                "options",
-                                e.target.value.split("\n"),
-                              )
-                            }
-                            rows={4}
-                            className="w-full rounded-lg border p-2"
-                            placeholder={"India\nUSA\nCanada"}
-                          />
-                        </div>
-                      )}
+                        <textarea
+                          id={`${selectedField.id}-radio-options`}
+                          value={(selectedField.options || []).join("\n")}
+                          onChange={(e) =>
+                            updateSelectedField(
+                              "options",
+                              e.target.value.split("\n"),
+                            )
+                          }
+                          rows={4}
+                          className="w-full rounded-lg border p-2"
+                          placeholder={"India\nUSA\nCanada"}
+                        />
+                      </div>
+                    )}
 
                     <button
                       onClick={deleteSelectedField}

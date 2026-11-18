@@ -192,7 +192,7 @@ function FormRenderer() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-   const visibleFields = getVisibleFields(form.fields, formValues);
+    const visibleFields = getVisibleFields(form.fields, formValues);
 
     const updatedErrors = {};
     const updatedTouched = {};

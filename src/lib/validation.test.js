@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from "vitest";
 import { validatePattern, validateField } from "./validation";
 
@@ -37,9 +36,7 @@ describe("validateField", () => {
       type: "Text",
     };
 
-    expect(validateField(field, "")).toEqual([
-      "This field is required.",
-    ]);
+    expect(validateField(field, "")).toEqual(["This field is required."]);
   });
 
   it("uses custom required error message", () => {
@@ -49,9 +46,7 @@ describe("validateField", () => {
       errorMessage: "Please enter your name.",
     };
 
-    expect(validateField(field, "")).toEqual([
-      "Please enter your name.",
-    ]);
+    expect(validateField(field, "")).toEqual(["Please enter your name."]);
   });
 
   it("requires checkbox value to be true", () => {
@@ -60,9 +55,7 @@ describe("validateField", () => {
       type: "Checkbox",
     };
 
-    expect(validateField(field, false)).toEqual([
-      "This field is required.",
-    ]);
+    expect(validateField(field, false)).toEqual(["This field is required."]);
   });
 
   it("accepts checked required checkbox", () => {
@@ -90,9 +83,7 @@ describe("validateField", () => {
       minLength: 5,
     };
 
-    expect(validateField(field, "abc")).toContain(
-      "Minimum length is 5.",
-    );
+    expect(validateField(field, "abc")).toContain("Minimum length is 5.");
   });
 
   it("checks maximum length", () => {
@@ -102,9 +93,7 @@ describe("validateField", () => {
       maxLength: 5,
     };
 
-    expect(validateField(field, "abcdefgh")).toContain(
-      "Maximum length is 5.",
-    );
+    expect(validateField(field, "abcdefgh")).toContain("Maximum length is 5.");
   });
 
   it("checks minimum number value", () => {
@@ -114,9 +103,7 @@ describe("validateField", () => {
       minValue: 18,
     };
 
-    expect(validateField(field, 15)).toContain(
-      "Minimum value is 18.",
-    );
+    expect(validateField(field, 15)).toContain("Minimum value is 18.");
   });
 
   it("checks maximum number value", () => {
@@ -126,9 +113,7 @@ describe("validateField", () => {
       maxValue: 60,
     };
 
-    expect(validateField(field, 70)).toContain(
-      "Maximum value is 60.",
-    );
+    expect(validateField(field, 70)).toContain("Maximum value is 60.");
   });
 
   it("rejects invalid email", () => {
@@ -158,9 +143,7 @@ describe("validateField", () => {
       pattern: "^\\d+$",
     };
 
-    expect(validateField(field, "abc")).toContain(
-      "Value format is invalid.",
-    );
+    expect(validateField(field, "abc")).toContain("Value format is invalid.");
   });
 
   it("uses custom regex error message", () => {
@@ -171,9 +154,7 @@ describe("validateField", () => {
       errorMessage: "Only numbers are allowed.",
     };
 
-    expect(validateField(field, "abc")).toContain(
-      "Only numbers are allowed.",
-    );
+    expect(validateField(field, "abc")).toContain("Only numbers are allowed.");
   });
 
   it("rejects unsafe regex during field validation", () => {

@@ -5,10 +5,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Form from "./models/Form.js";
 import Response from "./models/Response.js";
-import {getVisibleFields } from "./utils/conditions.js";
-import {
-  validateField, validatePattern
-} from "./utils/validation.js";
+import { getVisibleFields } from "./utils/conditions.js";
+import { validateField, validatePattern } from "./utils/validation.js";
 
 dotenv.config();
 
@@ -80,17 +78,16 @@ app.put("/api/forms/:id", async (req, res) => {
       });
     }
 
-for (const field of fields) {
-  const patternError = validatePattern(field.pattern);
+    for (const field of fields) {
+      const patternError = validatePattern(field.pattern);
 
-  if (patternError) {
-    return res.status(400).json({
-      message: patternError,
-      field: field.name,
-    });
-  }
-}
-
+      if (patternError) {
+        return res.status(400).json({
+          message: patternError,
+          field: field.name,
+        });
+      }
+    }
 
     const form = await Form.findByIdAndUpdate(
       id,
