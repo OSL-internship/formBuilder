@@ -1,8 +1,24 @@
+import { Formik, Form } from "formik";
+import { Button, buttonVariants } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Label } from "./components/ui/label";
+import { Textarea } from "./components/ui/textarea";
+import { Checkbox } from "./components/ui/checkbox";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select";
+import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 import { useEffect, useState } from "react";
 import { apiRequest } from "./services/api";
-import { validateField } from "./lib/validation";
-import { getVisibleFields } from "./lib/conditionEvaluator";
+import { validateField, validatePattern } from "../shared/validation";
+import { getVisibleFields } from "../shared/conditionEvaluator";
 import { Routes, Route } from "react-router-dom";
+import PublishedFormPage from "./PublishedFormPage";
 import FormRenderer from "./FormRenderer";
 
 const fieldTypes = [
@@ -54,10 +70,8 @@ function App() {
 
   function addField(type) {
     const baseName = type.toLowerCase().replaceAll(" ", "_");
-
     let suffix = 1;
     let fieldName = `${baseName}_${suffix}`;
-
     while (fields.some((field) => field.name === fieldName)) {
       suffix++;
       fieldName = `${baseName}_${suffix}`;
@@ -233,10 +247,10 @@ function App() {
     };
 
     const fieldLabel = (
-      <label htmlFor={field.id} className="block font-medium">
+      <Label htmlFor={field.id} className="block font-medium">
         {field.label}
         {field.required && <span aria-hidden="true"> *</span>}
-      </label>
+      </Label>
     );
 
     switch (field.type) {
@@ -244,7 +258,7 @@ function App() {
         return (
           <>
             {fieldLabel}
-            <input type="text" {...commonProps} />
+            <Input type="text" {...commonProps} />
           </>
         );
 
@@ -252,28 +266,28 @@ function App() {
         return (
           <>
             {fieldLabel}
-            <input type="email" {...commonProps} />
+            <Input type="email" {...commonProps} />
           </>
         );
       case "Number":
         return (
           <>
             {fieldLabel}
-            <input type="number" {...commonProps} />
+            <Input type="number" {...commonProps} />
           </>
         );
       case "Textarea":
         return (
           <>
             {fieldLabel}
-            <textarea {...commonProps} rows={3} />
+            <Textarea {...commonProps} rows={3} />
           </>
         );
       case "Date":
         return (
           <>
             {fieldLabel}
-            <input
+            <Input
               type="date"
               {...commonProps}
               className={commonProps.className}
@@ -282,52 +296,50 @@ function App() {
         );
       case "Checkbox":
         return (
-          <div className="mt-2">
-            <label htmlFor={field.id} className="flex items-center gap-2">
-              <input
-                id={field.id}
-                type="checkbox"
-                name={field.name}
-                checked={
-                  formValues[field.name] !== undefined
-                    ? formValues[field.name] === true ||
-                      formValues[field.name] === "true"
-                    : field.defaultValue === true ||
-                      field.defaultValue === "true"
-                }
-                required={field.required}
-                aria-invalid={errors[field.name]?.length > 0}
-                aria-describedby={
-                  errors[field.name]?.length > 0
-                    ? `${field.id}-error`
-                    : field.helpText
-                      ? `${field.id}-help`
-                      : undefined
-                }
-                onChange={(e) => {
-                  updateFormValue(field.name, e.target.checked);
-                  if (touchedFields[field.name]) {
-                    const updatedValue = e.target.checked;
+          <div className="mt-2 flex items-center gap-2">
+            <Checkbox
+              id={field.id}
+              name={field.name}
+              checked={
+                formValues[field.name] !== undefined
+                  ? formValues[field.name] === true ||
+                    formValues[field.name] === "true"
+                  : field.defaultValue === true || field.defaultValue === "true"
+              }
+              required={field.required}
+              aria-invalid={errors[field.name]?.length > 0}
+              aria-describedby={
+                errors[field.name]?.length > 0
+                  ? `${field.id}-error`
+                  : field.helpText
+                    ? `${field.id}-help`
+                    : undefined
+              }
+              onCheckedChange={(checked) => {
+                updateFormValue(field.name, checked);
 
-                    const updatedErrors = validateField(field, updatedValue);
+                if (touchedFields[field.name]) {
+                  const updatedErrors = validateField(field, checked);
 
-                    setErrors((current) => ({
-                      ...current,
-                      [field.name]: updatedErrors,
-                    }));
-                  }
-                }}
-                onBlur={() => {
-                  setTouchedFields((current) => ({
+                  setErrors((current) => ({
                     ...current,
-                    [field.name]: true,
+                    [field.name]: updatedErrors,
                   }));
-                  validateOneField(field);
-                }}
-              />
+                }
+              }}
+              onBlur={() => {
+                setTouchedFields((current) => ({
+                  ...current,
+                  [field.name]: true,
+                }));
+                validateOneField(field);
+              }}
+            />
+
+            <Label htmlFor={field.id}>
               {field.label}
               {field.required && <span aria-hidden="true"> *</span>}
-            </label>
+            </Label>
           </div>
         );
 
@@ -389,66 +401,60 @@ function App() {
               {field.label}
               {field.required && <span aria-hidden="true"> *</span>}
             </p>
-            {field.options.map((option, index) => {
-              const optionId = `${field.id}-option-${index}`;
 
-              return (
-                <label
-                  key={optionId}
-                  htmlFor={optionId}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    id={optionId}
-                    type="radio"
-                    name={field.name}
-                    required={field.required}
-                    value={option}
-                    checked={
-                      (formValues[field.name] !== undefined
-                        ? formValues[field.name]
-                        : field.defaultValue) === option
-                    }
-                    aria-labelledby={`${field.id}-label`}
-                    aria-invalid={errors[field.name]?.length > 0}
-                    aria-describedby={
-                      errors[field.name]?.length > 0
-                        ? `${field.id}-error`
-                        : field.helpText
-                          ? `${field.id}-help`
-                          : undefined
-                    }
+            <RadioGroup
+              name={field.name}
+              value={
+                formValues[field.name] !== undefined
+                  ? formValues[field.name]
+                  : field.defaultValue || ""
+              }
+              required={field.required}
+              aria-labelledby={`${field.id}-label`}
+              aria-invalid={errors[field.name]?.length > 0}
+              aria-describedby={
+                errors[field.name]?.length > 0
+                  ? `${field.id}-error`
+                  : field.helpText
+                    ? `${field.id}-help`
+                    : undefined
+              }
+              onValueChange={(nextValue) => {
+                updateFormValue(field.name, nextValue);
 
-                    onChange={(e) => {
-                      updateFormValue(field.name, e.target.value);
+                if (touchedFields[field.name]) {
+                  const updatedErrors = validateField(field, nextValue);
 
-                      if (touchedFields[field.name]) {
-                        const updatedValue = e.target.value;
+                  setErrors((current) => ({
+                    ...current,
+                    [field.name]: updatedErrors,
+                  }));
+                }
+              }}
+              className="flex flex-col gap-2"
+            >
+              {field.options.map((option, index) => {
+                const optionId = `${field.id}-option-${index}`;
 
-                        const updatedErrors = validateField(
-                          field,
-                          updatedValue,
-                        );
-
-                        setErrors((current) => ({
+                return (
+                  <div key={optionId} className="flex items-center gap-2">
+                    <RadioGroupItem
+                      id={optionId}
+                      value={option}
+                      onBlur={() => {
+                        setTouchedFields((current) => ({
                           ...current,
-                          [field.name]: updatedErrors,
+                          [field.name]: true,
                         }));
-                      }
-                    }}
+                        validateOneField(field);
+                      }}
+                    />
 
-                    onBlur={() => {
-                      setTouchedFields((current) => ({
-                        ...current,
-                        [field.name]: true,
-                      }));
-                      validateOneField(field);
-                    }}
-                  />
-                  {option}
-                </label>
-              );
-            })}
+                    <Label htmlFor={optionId}>{option}</Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
           </div>
         );
       default:
@@ -463,9 +469,42 @@ function App() {
     }));
   }
 
+  // function handlePreviewValueChange(name, value) {
+  //   updateFormValue(name, value);
+
+  //   const field = fields.find((item) => item.name === name);
+
+  //   if (field && touchedFields[name]) {
+  //     validateOneField(field, value);
+  //   }
+  // }
+
+  // function handlePreviewFieldBlur(field) {
+  //   setTouchedFields((current) => ({
+  //     ...current,
+  //     [field.name]: true,
+  //   }));
+
+  //   validateOneField(field);
+  // }
+
   async function handleSaveForm() {
     if (!formTitle.trim()) {
       setSaveMessage("Please enter a form title.");
+      setSaveMessageType("error");
+      return;
+    }
+
+    const invalidPatternField = fields.find(
+      (field) => field.pattern && validatePattern(field.pattern),
+    );
+
+    if (invalidPatternField) {
+      const patternError = validatePattern(invalidPatternField.pattern);
+
+      setSaveMessage(
+        `${invalidPatternField.label || invalidPatternField.name}: ${patternError}`,
+      );
       setSaveMessageType("error");
       return;
     }
@@ -493,7 +532,11 @@ function App() {
       setSaveMessage("Form saved successfully!");
       setSaveMessageType("success");
     } catch (error) {
-      setSaveMessage(error.message);
+      const message = error.field
+        ? `${error.field}: ${error.message}`
+        : error.message;
+
+      setSaveMessage(message);
       setSaveMessageType("error");
     } finally {
       setIsSaving(false);
@@ -522,7 +565,11 @@ function App() {
 
       await fetchSavedForms();
     } catch (error) {
-      setSaveMessage(error.message);
+      const message = error.field
+        ? `${error.field}: ${error.message}`
+        : error.message;
+
+      setSaveMessage(message);
       setSaveMessageType("error");
     } finally {
       setIsPublishing(false);
@@ -589,43 +636,45 @@ function App() {
     }
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  // function handleSubmit(e) {
+  //   e.preventDefault();
 
-    const newErrors = {};
+  //   const newErrors = {};
 
-    // Only validate visible fields
-    const visibleFields = getVisibleFields(fields, formValues);
+  //   // Only validate visible fields
+  //   visibleFields.forEach((field) => {
+  //     const value = formValues[field.name] ?? field.defaultValue ?? "";
+  //     const fieldErrors = validateField(field, value);
 
-    visibleFields.forEach((field) => {
-      const value = formValues[field.name] ?? field.defaultValue ?? "";
-      const fieldErrors = validateField(field, value);
+  //     if (fieldErrors.length > 0) {
+  //       newErrors[field.name] = fieldErrors;
+  //     }
+  //   });
 
-      if (fieldErrors.length > 0) {
-        newErrors[field.name] = fieldErrors;
-      }
-    });
+  //   setErrors(newErrors);
 
-    setErrors(newErrors);
+  //   if (Object.keys(newErrors).length > 0) {
+  //     setSubmittedData(null);
+  //     return;
+  //   }
 
-    if (Object.keys(newErrors).length > 0) {
-      setSubmittedData(null);
-      return;
-    }
+  //   // Submit only visible field values
+  //   const submittedValues = Object.fromEntries(
+  //     visibleFields.map((field) => [
+  //       field.name,
+  //       formValues[field.name] ?? field.defaultValue ?? "",
+  //     ]),
+  //   );
 
-    // Submit only visible field values
-    const submittedValues = Object.fromEntries(
-      visibleFields.map((field) => [
-        field.name,
-        formValues[field.name] ?? field.defaultValue ?? "",
-      ]),
-    );
+  //   setSubmittedData(submittedValues);
+  // }
 
-    setSubmittedData(submittedValues);
-  }
-
-  function validateOneField(field) {
-    const value = formValues[field.name] ?? "";
+  function validateOneField(
+    field,
+    value = formValues[field.name] ??
+      field.defaultValue ??
+      (field.type === "Checkbox" ? false : ""),
+  ) {
     const fieldErrors = validateField(field, value);
 
     setErrors((currentErrors) => {
@@ -904,7 +953,51 @@ function App() {
     });
   }
 
-  const visibleFields = getVisibleFields(fields, formValues);
+  // const visibleFields = getVisibleFields(fields, formValues);
+  const previewInitialValues = Object.fromEntries(
+    fields.map((field) => [
+      field.name,
+      formValues[field.name] ??
+        field.defaultValue ??
+        (field.type === "Checkbox" ? false : ""),
+    ]),
+  );
+
+  function validatePreviewForm(values) {
+    const errors = {};
+
+    const currentVisibleFields = getVisibleFields(fields, values);
+
+    currentVisibleFields.forEach((field) => {
+      const value =
+        values[field.name] ??
+        field.defaultValue ??
+        (field.type === "Checkbox" ? false : "");
+
+      const fieldErrors = validateField(field, value);
+
+      if (fieldErrors.length > 0) {
+        errors[field.name] = fieldErrors;
+      }
+    });
+
+    return errors;
+  }
+
+  function handleFormikSubmit(values) {
+    const currentVisibleFields = getVisibleFields(fields, values);
+
+    const submittedValues = Object.fromEntries(
+      currentVisibleFields.map((field) => [
+        field.name,
+        values[field.name] ??
+          field.defaultValue ??
+          (field.type === "Checkbox" ? false : ""),
+      ]),
+    );
+
+    setSubmittedData(submittedValues);
+  }
 
   return (
     <Routes>
@@ -918,35 +1011,37 @@ function App() {
                   FormCraft
                 </h1>
 
-                <input
+                <Input
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-40 rounded-lg border p-2 sm:w-56"
+                  className="w-40 sm:w-56"
                   placeholder="Enter form title"
                 />
 
                 {/* Mobile Menu Icon */}
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="icon"
                   onClick={() => setIsMenuOpen((prev) => !prev)}
-                  className="rounded-lg border p-2 text-xl md:hidden"
+                  className="text-xl md:hidden"
                   aria-label="Toggle menu"
                   aria-expanded={isMenuOpen}
                 >
                   {isMenuOpen ? "✕" : "☰"}
-                </button>
+                </Button>
 
                 {/* Desktop Buttons */}
                 <div className="hidden items-center gap-3 md:flex">
-                  <button
+                  <Button
                     onClick={handleSaveForm}
                     disabled={isSaving}
-                    className="rounded-lg bg-green-700 px-3 py-2 text-white"
+                    className="bg-green-700 text-white hover:bg-green-800"
                   >
                     {isSaving ? "Saving..." : "Save Form"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     onClick={() => {
                       handlePublishForm();
                       setIsMenuOpen(false);
@@ -954,74 +1049,71 @@ function App() {
                     disabled={
                       !formId || isPublishing || formStatus === "published"
                     }
-                    className=" rounded-lg bg-blue-600 px-2 py-2 text-white disabled:opacity-50"
+                    className="bg-blue-600 text-white hover:bg-blue-700"
                   >
                     {isPublishing
                       ? "Publishing..."
                       : formStatus === "published"
                         ? "Published"
                         : "Publish"}
-                  </button>
+                  </Button>
 
-                  <button
-                    onClick={handleNewForm}
-                    className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800"
-                  >
+                  <Button variant="secondary" onClick={handleNewForm}>
                     + New Form
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setIsPreview((current) => !current);
                       setSubmittedData(null);
                     }}
-                    className="rounded-lg border px-4 py-2"
                   >
                     {isPreview ? "Back to Builder" : "Preview"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     onClick={exportJSON}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
+                    className="bg-indigo-600 text-white hover:bg-indigo-700"
                   >
                     Export JSON
-                  </button>
+                  </Button>
 
-                  <label
+                  <Label
                     htmlFor="import-json"
-                    className="cursor-pointer rounded-lg border px-4 py-2 
-                 focus-within:outline focus-within:outline-2
-  focus-within:outline-indigo-600
-  focus-within:outline-offset-2
-                "
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "lg",
+                      className: "cursor-pointer relative",
+                    })}
                   >
                     Import JSON
-                    <input
+                    <Input
                       id="import-json"
                       type="file"
                       accept=".json,application/json"
                       onChange={importJSON}
-                      className="sr-only"
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     />
-                  </label>
+                  </Label>
                 </div>
               </div>
 
               {/* Mobile Dropdown Menu */}
               {isMenuOpen && (
                 <div className="mt-4 flex flex-col gap-2 md:hidden">
-                  <button
+                  <Button
                     onClick={() => {
                       handleSaveForm();
                       setIsMenuOpen(false);
                     }}
                     disabled={isSaving}
-                    className="rounded-lg bg-green-600 px-3 py-2 text-white"
+                    className="w-full bg-green-700 text-white hover:bg-green-800"
                   >
                     {isSaving ? "Saving..." : "Save Form"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     onClick={() => {
                       handlePublishForm();
                       setIsMenuOpen(false);
@@ -1029,49 +1121,57 @@ function App() {
                     disabled={
                       !formId || isPublishing || formStatus === "published"
                     }
-                    className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
                   >
                     {isPublishing
                       ? "Publishing..."
                       : formStatus === "published"
                         ? "Published"
                         : "Publish"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     onClick={() => {
                       handleNewForm();
                       setIsMenuOpen(false);
                     }}
-                    className="rounded-lg bg-slate-200 px-4 py-2"
                   >
                     + New Form
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="outline"
+                    className="w-full"
                     onClick={() => {
                       setIsPreview((current) => !current);
                       setSubmittedData(null);
                       setIsMenuOpen(false);
                     }}
-                    className="rounded-lg border px-4 py-2"
                   >
                     {isPreview ? "Back to Builder" : "Preview"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
                     onClick={() => {
                       exportJSON();
                       setIsMenuOpen(false);
                     }}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
                   >
                     Export JSON
-                  </button>
+                  </Button>
 
-                  <label className="cursor-pointer rounded-lg border px-4 py-2 text-center focus-within:outline focus-within:outline-2 focus-within:outline-indigo-600 focus-within:outline-offset-2">
+                  <Label
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "lg",
+                      className: "w-full cursor-pointer",
+                    })}
+                  >
                     Import JSON
-                    <input
+                    <Input
                       type="file"
                       accept=".json,application/json"
                       onChange={(e) => {
@@ -1080,7 +1180,7 @@ function App() {
                       }}
                       className="sr-only"
                     />
-                  </label>
+                  </Label>
                 </div>
               )}
 
@@ -1089,7 +1189,7 @@ function App() {
                   className={`mt-2 text-sm ${
                     saveMessageType === "error"
                       ? "text-red-500"
-                      : "text-green-600"
+                      : "text-green-700"
                   }`}
                 >
                   {saveMessage}
@@ -1112,16 +1212,18 @@ function App() {
                 <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
                 <div className="space-y-3">
                   {fieldTypes.map((type) => (
-                    <button
+                    <Button
                       key={type}
+                      type="button"
+                      variant="outline"
                       draggable
                       onClick={() => addField(type)}
                       onDragStart={() => setDraggedFieldType(type)}
                       onDragEnd={() => setDraggedFieldType(null)}
-                      className="w-full rounded-lg border p-3 text-left hover:border-indigo-500 hover:bg-indigo-50"
+                      className="w-full justify-start p-3 hover:border-indigo-500 hover:bg-indigo-50"
                     >
                       + {type}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </aside>
@@ -1132,51 +1234,34 @@ function App() {
                 </h2>
 
                 {isPreview ? (
-                  <form
-                    onSubmit={handleSubmit}
-                    noValidate
-                    className="space-y-4"
+                  <Formik
+                    initialValues={previewInitialValues}
+                    validate={validatePreviewForm}
+                    onSubmit={handleFormikSubmit}
                   >
-                    {visibleFields.map((field) => (
-                      <div key={field.id}>
-                        {renderField(field)}
-                        {field.helpText && (
-                          <p
-                            id={`${field.id}-help`}
-                            className="mt-1 text-sm text-slate-500"
-                          >
-                            {field.helpText}
-                          </p>
-                        )}
-                        {errors[field.name]?.length > 0 && (
-                          <p
-                            id={`${field.id}-error`}
-                            className="mt-1 text-sm text-red-600"
-                            role="alert"
-                          >
-                            {errors[field.name].join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                    <Form noValidate className="space-y-4">
+                      <FormRenderer
+                        schema={{ title: formTitle, fields }}
+                        onValueChange={updateFormValue}
+                      />
 
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
-                    >
-                      Submit
-                    </button>
-
-                    {submittedData && (
-                      <pre
-                        tabIndex={0}
-                        className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
+                      <Button
+                        type="submit"
+                        className="bg-indigo-600 text-white hover:bg-indigo-700"
                       >
-                        {" "}
-                        {JSON.stringify(submittedData, null, 2)}
-                      </pre>
-                    )}
-                  </form>
+                        Submit
+                      </Button>
+
+                      {submittedData && (
+                        <pre
+                          tabIndex={0}
+                          className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
+                        >
+                          {JSON.stringify(submittedData, null, 2)}
+                        </pre>
+                      )}
+                    </Form>
+                  </Formik>
                 ) : (
                   <div
                     onDragOver={(e) => e.preventDefault()}
@@ -1252,12 +1337,13 @@ function App() {
                 <div className="mb-5 border-b pb-4">
                   <h2 className="mb-3 text-lg font-semibold">Saved Forms</h2>
 
-                  <button
+                  <Button
+                    type="button"
                     onClick={fetchSavedForms}
-                    className="mb-3 rounded-lg bg-indigo-600 px-3 py-2 text-white"
+                    className="mb-3 bg-indigo-600 text-white hover:bg-indigo-700"
                   >
                     Refresh Forms
-                  </button>
+                  </Button>
 
                   <div className="space-y-2">
                     {savedForms.map((form) => (
@@ -1275,36 +1361,45 @@ function App() {
                         >
                           {form.status || "draft"}
                         </span>
-                        <div className="flex  gap-2">
-                          <button
+
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleLoadForm(form._id)}
-                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
                           >
                             Load
-                          </button>
+                          </Button>
 
-                          <button
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
                             onClick={() =>
                               window.open(`/forms/${form._id}`, "_blank")
                             }
-                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
                           >
                             Open Form
-                          </button>
+                          </Button>
 
-                          <button
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleCopyLink(form._id)}
-                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
                           >
                             Copy Link
-                          </button>
+                          </Button>
 
-                          <button
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
                             onClick={() => handleDeleteForm(form._id)}
-                            className="rounded bg-slate-100 px-1 py-1 border text-[12px]"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1320,13 +1415,13 @@ function App() {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-label`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Label
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-label`}
                         value={selectedField.label}
                         onChange={(e) =>
@@ -1337,13 +1432,13 @@ function App() {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-name`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Name
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-name`}
                         value={selectedField.name}
                         onChange={(e) =>
@@ -1354,13 +1449,13 @@ function App() {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-placeholder`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Placeholder
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-placeholder`}
                         value={selectedField.placeholder}
                         onChange={(e) =>
@@ -1371,13 +1466,13 @@ function App() {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-default`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Default Value
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-default`}
                         value={selectedField.defaultValue ?? ""}
                         onChange={(e) =>
@@ -1388,13 +1483,13 @@ function App() {
                     </div>
 
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-help`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Help Text
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-help`}
                         value={selectedField.helpText ?? ""}
                         onChange={(e) =>
@@ -1404,31 +1499,33 @@ function App() {
                       />
                     </div>
 
-                    <label
-                      htmlFor={`${selectedField.id}-property-required`}
-                      className="flex items-center gap-2"
-                    >
-                      <input
-                        id={`${selectedField.id}-property-required`}
-                        type="checkbox"
-                        checked={selectedField.required}
-                        onChange={(e) =>
-                          updateSelectedField("required", e.target.checked)
-                        }
-                      />
-                      Required field
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor={`${selectedField.id}-property-required`}
+                        className="flex items-center gap-2"
+                      >
+                        <Checkbox
+                          id={`${selectedField.id}-property-required`}
+                          checked={selectedField.required}
+                          onCheckedChange={(checked) =>
+                            updateSelectedField("required", checked === true)
+                          }
+                        />
+                        Required field
+                      </Label>
+                    </div>
 
                     <div className="space-y-3 rounded-lg border p-3">
                       <h3 className="font-medium">Conditional Logic</h3>
 
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-condition-field`}
                         className="block text-sm"
                       >
                         Show this field when
-                      </label>
+                      </Label>
 
+                      {/* Source field: native select retained to preserve empty-string behaviour */}
                       <select
                         id={`${selectedField.id}-condition-field`}
                         className="w-full rounded-lg border p-2"
@@ -1465,6 +1562,7 @@ function App() {
                         }}
                       >
                         <option value="">Always show</option>
+
                         {fields
                           .filter((field) => field.id !== selectedField.id)
                           .map((field) => (
@@ -1476,30 +1574,37 @@ function App() {
 
                       {selectedField.conditions?.length > 0 && (
                         <div className="space-y-3">
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-condition-match`}
                             className="font-medium"
                           >
                             Match Conditions
-                          </label>
+                          </Label>
 
                           {/* AND / OR selection */}
-                          <select
-                            id={`${selectedField.id}-condition-match`}
-                            className="w-full rounded-lg border p-2"
+                          <Select
                             value={selectedField.conditionLogic || "AND"}
-                            onChange={(e) =>
-                              updateSelectedField(
-                                "conditionLogic",
-                                e.target.value,
-                              )
+                            onValueChange={(value) =>
+                              updateSelectedField("conditionLogic", value)
                             }
                           >
-                            <option value="AND">
-                              Match ALL conditions (AND)
-                            </option>
-                            <option value="OR">Match ANY condition (OR)</option>
-                          </select>
+                            <SelectTrigger
+                              id={`${selectedField.id}-condition-match`}
+                              className="w-full"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              <SelectItem value="AND">
+                                Match ALL conditions (AND)
+                              </SelectItem>
+
+                              <SelectItem value="OR">
+                                Match ANY condition (OR)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
 
                           {/* Multiple conditions */}
                           {selectedField.conditions.map((condition, index) => (
@@ -1507,14 +1612,14 @@ function App() {
                               key={index}
                               className="space-y-2 rounded-lg border p-3"
                             >
-                              <label
+                              <Label
                                 htmlFor={`${selectedField.id}-condition-${index}`}
                                 className="text-sm font-medium"
                               >
                                 Condition {index + 1}
-                              </label>
+                              </Label>
 
-                              {/* Source field */}
+                              {/* Source field: native select retained to preserve empty-string behaviour */}
                               <select
                                 id={`${selectedField.id}-condition-${index}`}
                                 className="w-full rounded-lg border p-2"
@@ -1544,40 +1649,52 @@ function App() {
                               </select>
 
                               {/* Operator */}
-                              <select
-                                id={`${selectedField.id}-condition-operator-${index}`}
-                                aria-label={`Condition ${index + 1} operator`}
-                                className="w-full rounded-lg border p-2"
+                              <Select
                                 value={condition.operator}
-                                onChange={(e) => {
+                                onValueChange={(value) => {
                                   const updated = [...selectedField.conditions];
 
                                   updated[index] = {
                                     ...condition,
-                                    operator: e.target.value,
+                                    operator: value,
                                   };
 
                                   updateSelectedField("conditions", updated);
                                 }}
                               >
-                                <option value="equals">Equals</option>
-                                <option value="notEquals">
-                                  Does not equal
-                                </option>
-                                <option value="contains">Contains</option>
-                                <option value="greaterThan">
-                                  Greater than
-                                </option>
-                                <option value="lessThan">Less than</option>
-                                <option value="isEmpty">Is empty</option>
-                              </select>
+                                <SelectTrigger
+                                  id={`${selectedField.id}-condition-operator-${index}`}
+                                  aria-label={`Condition ${index + 1} operator`}
+                                  className="w-full"
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+
+                                <SelectContent>
+                                  <SelectItem value="equals">Equals</SelectItem>
+                                  <SelectItem value="notEquals">
+                                    Does not equal
+                                  </SelectItem>
+                                  <SelectItem value="contains">
+                                    Contains
+                                  </SelectItem>
+                                  <SelectItem value="greaterThan">
+                                    Greater than
+                                  </SelectItem>
+                                  <SelectItem value="lessThan">
+                                    Less than
+                                  </SelectItem>
+                                  <SelectItem value="isEmpty">
+                                    Is empty
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
 
                               {/* Comparison value */}
                               {condition.operator !== "isEmpty" && (
-                                <input
+                                <Input
                                   id={`${selectedField.id}-condition-value-${index}`}
                                   aria-label={`Condition ${index + 1} comparison value`}
-                                  className="w-full rounded-lg border p-2"
                                   placeholder="Comparison value"
                                   value={condition.value ?? ""}
                                   onChange={(e) => {
@@ -1596,9 +1713,10 @@ function App() {
                               )}
 
                               {/* Remove condition */}
-                              <button
+                              <Button
                                 type="button"
-                                className="text-sm text-red-600"
+                                variant="destructive"
+                                size="sm"
                                 onClick={() =>
                                   updateSelectedField(
                                     "conditions",
@@ -1609,14 +1727,15 @@ function App() {
                                 }
                               >
                                 Remove Condition
-                              </button>
+                              </Button>
                             </div>
                           ))}
 
                           {/* Add condition */}
-                          <button
+                          <Button
                             type="button"
-                            className="w-full rounded-lg border p-2 text-sm"
+                            variant="outline"
+                            className="w-full"
                             onClick={() =>
                               updateSelectedField("conditions", [
                                 ...selectedField.conditions,
@@ -1629,7 +1748,7 @@ function App() {
                             }
                           >
                             + Add Condition
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -1639,13 +1758,13 @@ function App() {
                     ) && (
                       <>
                         <div>
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-property-min-length`}
                             className="mb-1 block text-sm font-medium"
                           >
                             Minimum Length
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             id={`${selectedField.id}-property-min-length`}
                             type="number"
                             min="0"
@@ -1658,13 +1777,13 @@ function App() {
                         </div>
 
                         <div>
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-property-max-length`}
                             className="mb-1 block text-sm font-medium"
                           >
                             Maximum Length
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             id={`${selectedField.id}-property-max-length`}
                             type="number"
                             min="0"
@@ -1676,13 +1795,13 @@ function App() {
                           />
                         </div>
                         <div>
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-property-pattern`}
                             className="mb-1 block text-sm font-medium"
                           >
                             Regex Pattern
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             id={`${selectedField.id}-property-pattern`}
                             value={selectedField.pattern ?? ""}
                             onChange={(e) =>
@@ -1691,6 +1810,15 @@ function App() {
                             placeholder="Example: ^[A-Za-z]+$"
                             className="w-full rounded-lg border p-2"
                           />
+                          {selectedField.pattern &&
+                            validatePattern(selectedField.pattern) && (
+                              <p
+                                className="mt-1 text-sm text-red-600"
+                                role="alert"
+                              >
+                                {validatePattern(selectedField.pattern)}
+                              </p>
+                            )}
                         </div>
                       </>
                     )}
@@ -1698,13 +1826,13 @@ function App() {
                     {selectedField.type === "Number" && (
                       <>
                         <div>
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-property-min-value`}
                             className="mb-1 block text-sm font-medium"
                           >
                             Minimum Value
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             id={`${selectedField.id}-property-min-value`}
                             type="number"
                             value={selectedField.minValue ?? ""}
@@ -1716,13 +1844,13 @@ function App() {
                         </div>
 
                         <div>
-                          <label
+                          <Label
                             htmlFor={`${selectedField.id}-property-max-value`}
                             className="mb-1 block text-sm font-medium"
                           >
                             Maximum Value
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             id={`${selectedField.id}-property-max-value`}
                             type="number"
                             value={selectedField.maxValue ?? ""}
@@ -1736,13 +1864,13 @@ function App() {
                     )}
 
                     <div>
-                      <label
+                      <Label
                         htmlFor={`${selectedField.id}-property-custom-error`}
                         className="mb-1 block text-sm font-medium"
                       >
                         Custom Error Message
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         id={`${selectedField.id}-property-custom-error`}
                         value={selectedField.errorMessage ?? ""}
                         onChange={(e) =>
@@ -1756,14 +1884,14 @@ function App() {
                     {(selectedField.type === "Select" ||
                       selectedField.type === "Radio Group") && (
                       <div>
-                        <label
+                        <Label
                           htmlFor={`${selectedField.id}-radio-options`}
                           className="mb-1 block text-sm font-medium"
                         >
                           Options
-                        </label>
+                        </Label>
 
-                        <textarea
+                        <Textarea
                           id={`${selectedField.id}-radio-options`}
                           value={(selectedField.options || []).join("\n")}
                           onChange={(e) =>
@@ -1779,12 +1907,14 @@ function App() {
                       </div>
                     )}
 
-                    <button
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="w-full"
                       onClick={deleteSelectedField}
-                      className="w-full rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100"
                     >
                       Delete Field
-                    </button>
+                    </Button>
                   </div>
                 )}
               </aside>
@@ -1792,7 +1922,7 @@ function App() {
           </div>
         }
       />
-      <Route path="/forms/:id" element={<FormRenderer />} />
+      <Route path="/forms/:id" element={<PublishedFormPage />} />
     </Routes>
   );
 }

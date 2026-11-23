@@ -11,7 +11,7 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 - Field validation, including required fields, email, length, number, and regex validation.
 - Import and export forms using JSON.
 - Save, load, update, and delete forms.
-  -Preview forms and submit responses through published forms.
+- Preview forms and submit responses through published forms.
 - Responsive design for desktop and mobile.
 
 ## Tech Stack
@@ -29,18 +29,19 @@ FormCraft is a form builder that helps users create, customize, preview, and man
 
 ### Frontend Setup
 
-```bash
+Install the frontend dependencies from the project root directory:
 
+```bash
 npm install
 ```
 
-Create a `.env` file and add:
+Create a `.env` file in the project root and add:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Start the frontend:
+Start the frontend development server:
 
 ```bash
 npm run dev
@@ -48,12 +49,14 @@ npm run dev
 
 ### Backend Setup
 
+Navigate to the server directory and install the dependencies:
+
 ```bash
 cd server
 npm install
 ```
 
-Create a `.env` file and add:
+Create a `.env` file inside the `server` directory and add:
 
 ```env
 PORT=5000
@@ -61,10 +64,38 @@ MONGO_URI=your_mongodb_connection_string
 FRONTEND_URL=http://localhost:5173
 ```
 
-Start the backend:
+Start the backend server:
 
 ```bash
 npm start
+```
+
+## Testing and Code Quality
+
+Run these commands from the project root directory.
+
+### Run Tests with Coverage
+
+```bash
+npm run test:coverage
+```
+
+### Run ESLint
+
+```bash
+npm run lint
+```
+
+### Check Code Formatting
+
+```bash
+npm run format:check
+```
+
+### Build for Production
+
+```bash
+npm run build
 ```
 
 ## Project Purpose

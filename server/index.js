@@ -5,8 +5,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Form from "./models/Form.js";
 import Response from "./models/Response.js";
-import { getVisibleFields } from "./utils/conditions.js";
-import { validateField, validatePattern } from "./utils/validation.js";
+import { getVisibleFields } from "../shared/conditionEvaluator.js";
+import { validateField, validatePattern } from "../shared/validation.js";
 
 dotenv.config();
 

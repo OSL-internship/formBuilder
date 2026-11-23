@@ -1,8 +1,16 @@
 import { defineConfig } from "vitest/config";
 import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
 export default defineConfig({
   plugins: [tailwindcss()],
+
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
+
   test: {
     globals: true,
     environment: "node",

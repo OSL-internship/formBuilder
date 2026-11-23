@@ -29,7 +29,7 @@ export async function apiRequest(endpoint, options = {}) {
 
     error.status = response.status;
     error.errors = data.errors || {};
-
+    error.field = data.field || null;
     throw error;
   }
 

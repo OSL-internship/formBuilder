@@ -1,186 +1,172 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { apiRequest } from "./services/api";
-import { validateField } from "./lib/validation";
-import { getVisibleFields } from "./lib/conditionEvaluator";
+import { getIn, useFormikContext } from "formik";
+import { getVisibleFields } from "../shared/conditionEvaluator";
 
-function FormRenderer() {
-  const { id } = useParams();
+import { Input } from "./components/ui/input";
+import { Label } from "./components/ui/label";
+import { Textarea } from "./components/ui/textarea";
 
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [formValues, setFormValues] = useState({});
-  const [errors, setErrors] = useState({});
-  const [touchedFields, setTouchedFields] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select";
 
-  // Fetch saved form
-  useEffect(() => {
-    async function fetchForm() {
-      try {
-        const data = await apiRequest(`/forms/${id}/published`);
-        const fetchedForm = data.form || data;
+import { Checkbox } from "./components/ui/checkbox";
 
-        setForm(fetchedForm);
+import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 
-        // Initialize default values
-        const initialValues = {};
+function FormRenderer({ schema, onValueChange }) {
+  const { values, errors, touched, setFieldValue, setFieldTouched } =
+    useFormikContext();
 
-        fetchedForm.fields.forEach((field) => {
-          initialValues[field.name] =
-            field.defaultValue !== undefined
-              ? field.defaultValue
-              : field.type === "Checkbox"
-                ? false
-                : "";
-        });
-
-        setFormValues(initialValues);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchForm();
-  }, [id]);
-
-  useEffect(() => {
-    if (!successMessage) return;
-
-    const timer = setTimeout(() => {
-      setSuccessMessage("");
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [successMessage]);
-
-  // Update form values
-  function updateFormValue(name, value) {
-    setFormValues((current) => ({
-      ...current,
-      [name]: value,
-    }));
+  function updateValue(name, value) {
+    setFieldValue(name, value);
+    onValueChange?.(name, value);
   }
 
-  // Validate one field
-  function validateOneField(field, value = formValues[field.name]) {
-    const fieldErrors = validateField(field, value);
+  const fields = schema?.fields || [];
 
-    setErrors((current) => {
-      const updated = { ...current };
+  const effectiveValues = Object.fromEntries(
+    fields.map((field) => [
+      field.name,
+      getIn(values, field.name) ??
+        field.defaultValue ??
+        (field.type === "Checkbox" ? false : ""),
+    ]),
+  );
 
-      if (fieldErrors.length > 0) {
-        updated[field.name] = fieldErrors;
-      } else {
-        delete updated[field.name];
-      }
+  const visibleFields = getVisibleFields(fields, effectiveValues);
 
-      return updated;
-    });
-
-    return fieldErrors.length === 0;
-  }
-
-  // Render form fields
   function renderField(field) {
+    const value =
+      getIn(values, field.name) ??
+      field.defaultValue ??
+      (field.type === "Checkbox" ? false : "");
+
+    const fieldError = getIn(errors, field.name);
+
+    const errorMessages = Array.isArray(fieldError)
+      ? fieldError
+      : fieldError
+        ? [fieldError]
+        : [];
+
+    const hasError =
+      Boolean(getIn(touched, field.name)) && errorMessages.length > 0;
+
+    const describedBy =
+      [
+        field.helpText ? `${field.id}-help` : null,
+        hasError ? `${field.id}-error` : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined;
+
     const commonProps = {
-      id: field.name,
+      id: field.id,
       name: field.name,
       placeholder: field.placeholder || field.label,
-      value: formValues[field.name] ?? "",
       required: field.required,
-      onChange: (e) => {
-        const value = e.target.value;
-        updateFormValue(field.name, value);
-
-        if (touchedFields[field.name]) {
-          validateOneField(field, value);
-        }
-      },
-      onBlur: () => {
-        setTouchedFields((current) => ({
-          ...current,
-          [field.name]: true,
-        }));
-
-        validateOneField(field);
-      },
-      className: "w-full rounded-lg border border-slate-300 p-2",
+      "aria-invalid": hasError,
+      "aria-describedby": describedBy,
+      onBlur: () => setFieldTouched(field.name, true),
     };
 
     switch (field.type) {
       case "Text":
-        return <input type="text" {...commonProps} />;
-
       case "Email":
-        return <input type="email" {...commonProps} />;
-
       case "Number":
-        return <input type="number" {...commonProps} />;
+      case "Date":
+        return (
+          <Input
+            {...commonProps}
+            type={field.type.toLowerCase()}
+            value={value}
+            className="mt-2 w-full"
+            onChange={(e) => updateValue(field.name, e.target.value)}
+          />
+        );
 
       case "Textarea":
-        return <textarea rows={3} {...commonProps} />;
-
-      case "Date":
-        return <input type="date" {...commonProps} />;
+        return (
+          <Textarea
+            {...commonProps}
+            rows={3}
+            value={value}
+            className="mt-2 w-full"
+            onChange={(e) => updateValue(field.name, e.target.value)}
+          />
+        );
 
       case "Select":
         return (
-          <select {...commonProps}>
-            <option value="">Select an option</option>
-            {(field.options || []).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        );
+          <Select
+            name={field.name}
+            value={value || null}
+            onValueChange={(nextValue) => updateValue(field.name, nextValue)}
+          >
+            <SelectTrigger
+              id={field.id}
+              className="mt-2 w-full"
+              aria-invalid={hasError}
+              aria-describedby={describedBy}
+              onBlur={() => setFieldTouched(field.name, true)}
+            >
+              <SelectValue
+                placeholder={field.placeholder || "Select an option"}
+              />
+            </SelectTrigger>
 
-      case "Radio Group":
-        return (
-          <div className="space-y-2">
-            {(field.options || []).map((option) => (
-              <label key={option} className="flex gap-2">
-                <input
-                  type="radio"
-                  name={field.name}
-                  value={option}
-                  checked={formValues[field.name] === option}
-                  onChange={() => {
-                    updateFormValue(field.name, option);
-
-                    if (touchedFields[field.name]) {
-                      validateOneField(field, option);
-                    }
-                  }}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
+            <SelectContent>
+              {(field.options || []).map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
 
       case "Checkbox":
         return (
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name={field.name}
-              checked={Boolean(formValues[field.name])}
-              onChange={(e) => {
-                const value = e.target.checked;
-                updateFormValue(field.name, value);
-
-                if (touchedFields[field.name]) {
-                  validateOneField(field, value);
-                }
-              }}
+          <div className="mt-2 flex items-center gap-2">
+            <Checkbox
+              {...commonProps}
+              checked={value === true || value === "true"}
+              onCheckedChange={(checked) => updateValue(field.name, checked)}
             />
-          </label>
+
+            <Label htmlFor={field.id}>
+              {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
+            </Label>
+          </div>
+        );
+
+      case "Radio Group":
+        return (
+          <RadioGroup
+            value={value || ""}
+            onValueChange={(nextValue) => updateValue(field.name, nextValue)}
+            onBlur={() => setFieldTouched(field.name, true)}
+            aria-invalid={hasError}
+            aria-describedby={describedBy}
+            className="mt-2"
+          >
+            {(field.options || []).map((option, index) => {
+              const optionId = `${field.id}-option-${index}`;
+
+              return (
+                <div key={optionId} className="flex items-center gap-2">
+                  <RadioGroupItem id={optionId} value={option} />
+
+                  <Label htmlFor={optionId}>{option}</Label>
+                </div>
+              );
+            })}
+          </RadioGroup>
         );
 
       default:
@@ -188,122 +174,55 @@ function FormRenderer() {
     }
   }
 
-  // Submit form
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    const visibleFields = getVisibleFields(form.fields, formValues);
-
-    const updatedErrors = {};
-    const updatedTouched = {};
-
-    visibleFields.forEach((field) => {
-      updatedTouched[field.name] = true;
-
-      const fieldErrors = validateField(field, formValues[field.name]);
-
-      if (fieldErrors.length > 0) {
-        updatedErrors[field.name] = fieldErrors;
-      }
-    });
-
-    setErrors(updatedErrors);
-    setTouchedFields((current) => ({
-      ...current,
-      ...updatedTouched,
-    }));
-
-    if (Object.keys(updatedErrors).length > 0) {
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setSuccessMessage("");
-
-      const data = await apiRequest(`/forms/${id}/submit`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...formValues,
-          _formUpdatedAt: form.updatedAt,
-        }),
-      });
-
-      setSuccessMessage(data.message || "Form submitted successfully!");
-
-      setFormValues({});
-      setErrors({});
-      setTouchedFields({});
-    } catch (error) {
-      if (error.errors && Object.keys(error.errors).length > 0) {
-        setErrors(error.errors);
-
-        setTouchedFields((current) => ({
-          ...current,
-          ...Object.fromEntries(
-            Object.keys(error.errors).map((fieldName) => [fieldName, true]),
-          ),
-        }));
-
-        setError("");
-      } else {
-        setError(error.message || "Unable to submit form. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  if (loading) return <p>Loading form...</p>;
-
-  if (error && !form) return <p>{error}</p>;
-
-  if (!form) return <p>Form not found.</p>;
-  const visibleFields = getVisibleFields(form.fields, formValues);
   return (
-    <div className="min-h-screen bg-slate-100 p-6">
-      <div className="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow">
-        <h1 className="mb-6 text-2xl font-bold">{form.title}</h1>
+    <div className="space-y-4">
+      {visibleFields.map((field) => {
+        const fieldError = getIn(errors, field.name);
 
-        <form onSubmit={handleSubmit} noValidate>
-          {visibleFields.map((field) => (
-            <div key={field.id} className="mb-5">
-              <label htmlFor={field.name} className="font-medium">
+        const errorMessages = Array.isArray(fieldError)
+          ? fieldError
+          : fieldError
+            ? [fieldError]
+            : [];
+
+        const showError =
+          Boolean(getIn(touched, field.name)) && errorMessages.length > 0;
+
+        return (
+          <div key={field.id}>
+            {field.type !== "Checkbox" && (
+              <Label
+                htmlFor={field.type === "Radio Group" ? undefined : field.id}
+                className="block"
+              >
                 {field.label}
-                {field.required && <span className="text-red-500"> *</span>}
-              </label>
+                {field.required && <span aria-hidden="true"> *</span>}
+              </Label>
+            )}
 
-              <div className="mt-2">
-                {renderField(field)}
-                {field.helpText && (
-                  <p className="mt-1 text-sm text-slate-500">
-                    {field.helpText}
-                  </p>
-                )}
-                {errors[field.name]?.map((message, index) => (
-                  <p key={index} className="mt-1 text-sm text-red-500">
-                    {message}
-                  </p>
-                ))}
-              </div>
-            </div>
-          ))}
+            {renderField(field)}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-4 rounded-lg bg-indigo-600 px-5 py-2 text-white disabled:opacity-50"
-          >
-            {isSubmitting ? "Submitting..." : "Submit Form"}
-          </button>
-        </form>
+            {field.helpText && (
+              <p
+                id={`${field.id}-help`}
+                className="mt-1 text-sm text-muted-foreground"
+              >
+                {field.helpText}
+              </p>
+            )}
 
-        {successMessage && (
-          <p className="mt-4 text-green-600">{successMessage}</p>
-        )}
-
-        {error && form && <p className="mt-4 text-red-500">{error}</p>}
-      </div>
+            {showError && (
+              <p
+                id={`${field.id}-error`}
+                className="mt-1 text-sm text-destructive"
+                role="alert"
+              >
+                {errorMessages.join(", ")}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

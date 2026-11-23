@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getVisibleFields } from "./conditionEvaluator";
+import { getVisibleFields } from "../shared/conditionEvaluator";
 
 describe("getVisibleFields", () => {
   it("should return all fields when no conditions exist", () => {
@@ -218,6 +218,56 @@ describe("getVisibleFields", () => {
     ];
 
     expect(getVisibleFields(fields, {})).toEqual([]);
+  });
+
+  it("should support three-level chained conditions", () => {
+    const fields = [
+      { id: "1", name: "country" },
+      {
+        id: "2",
+        name: "state",
+        conditions: [{ fieldId: "1", operator: "equals", value: "India" }],
+      },
+      {
+        id: "3",
+        name: "city",
+        conditions: [{ fieldId: "2", operator: "equals", value: "UP" }],
+      },
+    ];
+
+    const result = getVisibleFields(fields, {
+      country: "India",
+      state: "UP",
+    });
+
+    expect(result.map((field) => field.name)).toEqual([
+      "country",
+      "state",
+      "city",
+    ]);
+  });
+
+  it("should hide third-level field when its parent is hidden", () => {
+    const fields = [
+      { id: "1", name: "country" },
+      {
+        id: "2",
+        name: "state",
+        conditions: [{ fieldId: "1", operator: "equals", value: "India" }],
+      },
+      {
+        id: "3",
+        name: "city",
+        conditions: [{ fieldId: "2", operator: "equals", value: "UP" }],
+      },
+    ];
+
+    const result = getVisibleFields(fields, {
+      country: "USA",
+      state: "UP",
+    });
+
+    expect(result.map((field) => field.name)).toEqual(["country"]);
   });
 
   it("should handle unknown operators", () => {
