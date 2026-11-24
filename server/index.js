@@ -7,13 +7,26 @@ import Form from "./models/Form.js";
 import Response from "./models/Response.js";
 import { getVisibleFields } from "../shared/conditionEvaluator.js";
 import { validateField, validatePattern } from "../shared/validation.js";
+import authRoutes from "./routes/auth.js";
+import cookieParser from "cookie-parser";
+import authMiddleware from "./middleware/authMiddleware.js";
+
 
 dotenv.config();
 
 const app = express();
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
 
-app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
+
+app.use("/api/auth", authRoutes);
+
 
 // Test route
 app.get("/api/abc", (req, res) => {
@@ -21,7 +34,7 @@ app.get("/api/abc", (req, res) => {
 });
 
 // Create form
-app.post("/api/forms", async (req, res) => {
+app.post("/api/forms", authMiddleware, async (req, res) => {
   try {
     const { title, fields } = req.body;
 
@@ -45,6 +58,7 @@ app.post("/api/forms", async (req, res) => {
     const form = await Form.create({
       title: title.trim(),
       fields,
+      userId: req.user.id,
     });
 
     res.status(201).json({
@@ -61,7 +75,7 @@ app.post("/api/forms", async (req, res) => {
 });
 
 /* Update form */
-app.put("/api/forms/:id", async (req, res) => {
+app.put("/api/forms/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, fields } = req.body;
@@ -121,9 +135,11 @@ app.put("/api/forms/:id", async (req, res) => {
 });
 
 /* Get all saved forms */
-app.get("/api/forms", async (req, res) => {
+app.get("/api/forms", authMiddleware, async (req, res) => {
   try {
-    const forms = await Form.find()
+    const forms = await Form.find({
+      userId: req.user.id,
+    })
       .select("title status createdAt updatedAt")
       .sort({ updatedAt: -1 });
 
@@ -138,7 +154,7 @@ app.get("/api/forms", async (req, res) => {
 });
 
 /* Get one form by ID */
-app.get("/api/forms/:id", async (req, res) => {
+app.get("/api/forms/:id", authMiddleware, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
@@ -146,7 +162,10 @@ app.get("/api/forms/:id", async (req, res) => {
       });
     }
 
-    const form = await Form.findById(req.params.id);
+    const form = await Form.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
 
     if (!form) {
       return res.status(404).json({
@@ -255,7 +274,7 @@ app.post("/api/forms/:id/submit", async (req, res) => {
 });
 
 /* Get form responses */
-app.get("/api/forms/:id/responses", async (req, res) => {
+app.get("/api/forms/:id/responses", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
@@ -308,7 +327,7 @@ app.delete("/api/forms/:id", async (req, res) => {
 });
 
 /* Publish form */
-app.patch("/api/forms/:id/publish", async (req, res) => {
+app.patch("/api/forms/:id/publish", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
