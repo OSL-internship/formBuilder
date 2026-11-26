@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-
+import process from "node:process";
 const authMiddleware = async (req, res, next) => {
   try {
     const token = req.cookies?.formcraft_token;
@@ -28,7 +28,7 @@ const authMiddleware = async (req, res, next) => {
     };
 
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       message: "Invalid or expired session. Please log in again.",
     });

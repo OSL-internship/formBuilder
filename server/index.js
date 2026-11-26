@@ -11,7 +11,6 @@ import authRoutes from "./routes/auth.js";
 import cookieParser from "cookie-parser";
 import authMiddleware from "./middleware/authMiddleware.js";
 
-
 dotenv.config();
 
 const app = express();
@@ -26,7 +25,6 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
-
 
 // Test route
 app.get("/api/abc", (req, res) => {
@@ -103,8 +101,11 @@ app.put("/api/forms/:id", authMiddleware, async (req, res) => {
       }
     }
 
-    const form = await Form.findByIdAndUpdate(
-      id,
+    const form = await Form.findOneAndUpdate(
+      {
+        _id: id,
+        userId: req.user.id,
+      },
       {
         title: title.trim(),
         fields,
@@ -282,6 +283,18 @@ app.get("/api/forms/:id/responses", authMiddleware, async (req, res) => {
         message: "Invalid form ID.",
       });
     }
+
+    const form = await Form.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!form) {
+      return res.status(404).json({
+        message: "Form not found.",
+      });
+    }
+
     const responses = await Response.find({
       formId: id,
     }).sort({ createdAt: -1 });
@@ -296,7 +309,7 @@ app.get("/api/forms/:id/responses", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/api/forms/:id", async (req, res) => {
+app.delete("/api/forms/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
@@ -304,7 +317,12 @@ app.delete("/api/forms/:id", async (req, res) => {
         message: "Invalid form ID.",
       });
     }
-    const form = await Form.findById(id);
+
+    const form = await Form.findOne({
+      _id: id,
+      userId: req.user.id,
+    });
+
     if (!form) {
       return res.status(404).json({
         message: "Form not found.",
@@ -312,7 +330,10 @@ app.delete("/api/forms/:id", async (req, res) => {
     }
 
     await Response.deleteMany({ formId: id });
-    await Form.findByIdAndDelete(id);
+    await Form.deleteOne({
+      _id: id,
+      userId: req.user.id,
+    });
 
     res.status(200).json({
       message: "Form and its responses deleted successfully.",
@@ -337,8 +358,17 @@ app.patch("/api/forms/:id/publish", authMiddleware, async (req, res) => {
       });
     }
 
-    const form = await Form.findByIdAndUpdate(
-      id,
+    // const form = await Form.findByIdAndUpdate(
+    //   id,
+    //   { status: "published" },
+    //   { new: true, runValidators: true },
+    // );
+
+    const form = await Form.findOneAndUpdate(
+      {
+        _id: id,
+        userId: req.user.id,
+      },
       { status: "published" },
       { new: true, runValidators: true },
     );
@@ -385,7 +415,7 @@ app.get("/api/forms/:id/published", async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       message: "Published form retrieved successfully",
       form,
     });
@@ -404,7 +434,6 @@ async function startServer() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("MongoDB connected");
-
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });

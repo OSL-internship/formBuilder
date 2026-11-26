@@ -4,7 +4,7 @@ import { Input } from "./components/ui/input";
 import { Label } from "./components/ui/label";
 import { Textarea } from "./components/ui/textarea";
 import { Checkbox } from "./components/ui/checkbox";
-
+import { useAuth } from "./context/AuthContext";
 import {
   Select,
   SelectContent,
@@ -20,7 +20,9 @@ import { getVisibleFields } from "../shared/conditionEvaluator";
 import { Routes, Route } from "react-router-dom";
 import PublishedFormPage from "./PublishedFormPage";
 import FormRenderer from "./FormRenderer";
-
+import Auth from "./Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { useNavigate } from "react-router-dom";
 const fieldTypes = [
   "Text",
   "Textarea",
@@ -53,7 +55,8 @@ function App() {
   const [draggedFieldType, setDraggedFieldType] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [saveMessageType, setSaveMessageType] = useState("");
-
+  const { user, logout, loading } = useAuth();
+  const navigate = useNavigate();
   useEffect(() => {
     if (!saveMessage) return;
 
@@ -64,9 +67,24 @@ function App() {
     return () => clearTimeout(timer);
   }, [saveMessage]);
 
+  // useEffect(() => {
+  //   fetchSavedForms();
+  // }, []);
+
   useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSavedForms([]);
+      handleNewForm();
+      return;
+    }
+
+    handleNewForm();
+    setSavedForms([]);
     fetchSavedForms();
-  }, []);
+  }, [user, loading]);
 
   function addField(type) {
     const baseName = type.toLowerCase().replaceAll(" ", "_");
@@ -303,7 +321,7 @@ function App() {
               checked={
                 formValues[field.name] !== undefined
                   ? formValues[field.name] === true ||
-                    formValues[field.name] === "true"
+                  formValues[field.name] === "true"
                   : field.defaultValue === true || field.defaultValue === "true"
               }
               required={field.required}
@@ -636,7 +654,6 @@ function App() {
     }
   }
 
-
   // function handleSubmit(e) {
   //   e.preventDefault();
 
@@ -959,8 +976,8 @@ function App() {
     fields.map((field) => [
       field.name,
       formValues[field.name] ??
-        field.defaultValue ??
-        (field.type === "Checkbox" ? false : ""),
+      field.defaultValue ??
+      (field.type === "Checkbox" ? false : ""),
     ]),
   );
 
@@ -992,8 +1009,8 @@ function App() {
       currentVisibleFields.map((field) => [
         field.name,
         values[field.name] ??
-          field.defaultValue ??
-          (field.type === "Checkbox" ? false : ""),
+        field.defaultValue ??
+        (field.type === "Checkbox" ? false : ""),
       ]),
     );
 
@@ -1005,925 +1022,976 @@ function App() {
       <Route
         path="/"
         element={
-          <div className="min-h-screen bg-slate-100 text-slate-900">
-            <header className="border-b bg-white px-4 py-4 sm:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-xl font-bold text-indigo-600 lg:text-2xl">
-                  FormCraft
-                </h1>
-
-                <Input
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-40 sm:w-56"
-                  placeholder="Enter form title"
-                />
-
-                {/* Mobile Menu Icon */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsMenuOpen((prev) => !prev)}
-                  className="text-xl md:hidden"
-                  aria-label="Toggle menu"
-                  aria-expanded={isMenuOpen}
-                >
-                  {isMenuOpen ? "✕" : "☰"}
-                </Button>
-
-                {/* Desktop Buttons */}
-                <div className="hidden items-center gap-3 md:flex">
-                  <Button
-                    onClick={handleSaveForm}
-                    disabled={isSaving}
-                    className="bg-green-700 text-white hover:bg-green-800"
-                  >
-                    {isSaving ? "Saving..." : "Save Form"}
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      handlePublishForm();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={
-                      !formId || isPublishing || formStatus === "published"
-                    }
-                    className="bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    {isPublishing
-                      ? "Publishing..."
-                      : formStatus === "published"
-                        ? "Published"
-                        : "Publish"}
-                  </Button>
-
-                  <Button variant="secondary" onClick={handleNewForm}>
-                    + New Form
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsPreview((current) => !current);
-                      setSubmittedData(null);
-                    }}
-                  >
-                    {isPreview ? "Back to Builder" : "Preview"}
-                  </Button>
-
-                  <Button
-                    onClick={exportJSON}
-                    className="bg-indigo-600 text-white hover:bg-indigo-700"
-                  >
-                    Export JSON
-                  </Button>
-
-                  <Label
-                    htmlFor="import-json"
-                    className={buttonVariants({
-                      variant: "outline",
-                      size: "lg",
-                      className: "cursor-pointer relative",
-                    })}
-                  >
-                    Import JSON
-                    <Input
-                      id="import-json"
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={importJSON}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </Label>
-                </div>
-              </div>
-
-              {/* Mobile Dropdown Menu */}
-              {isMenuOpen && (
-                <div className="mt-4 flex flex-col gap-2 md:hidden">
-                  <Button
-                    onClick={() => {
-                      handleSaveForm();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={isSaving}
-                    className="w-full bg-green-700 text-white hover:bg-green-800"
-                  >
-                    {isSaving ? "Saving..." : "Save Form"}
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      handlePublishForm();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={
-                      !formId || isPublishing || formStatus === "published"
-                    }
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    {isPublishing
-                      ? "Publishing..."
-                      : formStatus === "published"
-                        ? "Published"
-                        : "Publish"}
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => {
-                      handleNewForm();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    + New Form
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setIsPreview((current) => !current);
-                      setSubmittedData(null);
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    {isPreview ? "Back to Builder" : "Preview"}
-                  </Button>
-
-                  <Button
-                    className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
-                    onClick={() => {
-                      exportJSON();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Export JSON
-                  </Button>
-
-                  <Label
-                    className={buttonVariants({
-                      variant: "outline",
-                      size: "lg",
-                      className: "w-full cursor-pointer",
-                    })}
-                  >
-                    Import JSON
-                    <Input
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={(e) => {
-                        importJSON(e);
-                        setIsMenuOpen(false);
-                      }}
-                      className="sr-only"
-                    />
-                  </Label>
-                </div>
-              )}
-
-              {saveMessage && (
-                <p
-                  className={`mt-2 text-sm ${
-                    saveMessageType === "error"
-                      ? "text-red-500"
-                      : "text-green-700"
-                  }`}
-                >
-                  {saveMessage}
-                </p>
-              )}
-
-              {importError && (
-                <p role="alert" className="mt-2 text-sm text-red-600">
-                  {importError}
-                </p>
-              )}
-            </header>
-
-            <main className="grid min-h-[calc(100vh-73px)] grid-cols-1 sm:p-4 lg:grid-cols-12 gap-4 p-4">
-              <aside
-                aria-label="Field Palette"
-                className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3"
-              >
-                {" "}
-                <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
-                <div className="space-y-3">
-                  {fieldTypes.map((type) => (
-                    <Button
-                      key={type}
-                      type="button"
-                      variant="outline"
-                      draggable
-                      onClick={() => addField(type)}
-                      onDragStart={() => setDraggedFieldType(type)}
-                      onDragEnd={() => setDraggedFieldType(null)}
-                      className="w-full justify-start p-3 hover:border-indigo-500 hover:bg-indigo-50"
-                    >
-                      + {type}
-                    </Button>
-                  ))}
-                </div>
-              </aside>
-
-              <section className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-6">
-                <h2 className="mb-4 text-lg font-semibold">
-                  {isPreview ? "Form Preview" : "Form Canvas"}
-                </h2>
-
-                {isPreview ? (
-                  <Formik
-                    initialValues={previewInitialValues}
-                    validate={validatePreviewForm}
-                    onSubmit={handleFormikSubmit}
-                  >
-                    <Form noValidate className="space-y-4">
-                      <FormRenderer
-                        schema={{ title: formTitle, fields }}
-                        onValueChange={updateFormValue}
-                      />
-
-                      <Button
-                        type="submit"
-                        className="bg-indigo-600 text-white hover:bg-indigo-700"
-                      >
-                        Submit
-                      </Button>
-
-                      {submittedData && (
-                        <pre
-                          tabIndex={0}
-                          className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
-                        >
-                          {JSON.stringify(submittedData, null, 2)}
-                        </pre>
-                      )}
-                    </Form>
-                  </Formik>
-                ) : (
-                  <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-
-                      if (draggedFieldType) {
-                        addField(draggedFieldType);
-                        setDraggedFieldType(null);
-                      }
-                    }}
-                    className="min-h-[500px] space-y-4 rounded-lg border-2 border-dashed border-slate-300 p-4"
-                  >
-                    {fields.length === 0 ? (
-                      <p className="py-20 text-center text-slate-500">
-                        Add fields here to build your form.
-                      </p>
-                    ) : (
-                      fields.map((field) => (
-                        <div
-                          key={field.id}
-                          tabIndex={0}
-
-                          onKeyDown={(e) => {
-                            if (e.target !== e.currentTarget) return;
-
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setSelectedFieldId(field.id);
-                            }
-
-                            if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              moveField(field.id, -1);
-                            }
-
-                            if (e.key === "ArrowDown") {
-                              e.preventDefault();
-                              moveField(field.id, 1);
-                            }
-                          }}
-                          draggable
-                          onDragStart={() => setDraggedFieldId(field.id)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => handleDrop(field.id)}
-                          onDragEnd={() => setDraggedFieldId(null)}
-                          onClick={() => setSelectedFieldId(field.id)}
-
-                          className={`cursor-move rounded-lg border bg-white p-4 ${
-                            selectedFieldId === field.id
-                              ? "border-indigo-600 ring-2 ring-indigo-100"
-                              : "border-slate-200"
-                          } ${draggedFieldId === field.id ? "opacity-50" : ""}`}
-                        >
-                          {renderField(field)}
-                          {field.helpText && (
-                            <p className="mt-1 text-sm text-slate-500">
-                              {field.helpText}
-                            </p>
-                          )}
-
-                          <p className="mt-1 text-sm text-slate-500">
-                            Type: {field.type} · Name: {field.name}
-                          </p>
-                        </div>
-                      ))
+          <ProtectedRoute>
+            <div className="min-h-screen bg-slate-100 text-slate-900">
+              <header className="border-b bg-white px-4 py-4 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h1 className="text-xl font-bold text-indigo-600 lg:text-2xl">
+                    FormCraft
+                    {user && (
+                      <div className="flex text-gray-700 items-center gap-3">
+                        <span className="text-sm">Username: {user.name}</span>
+                      </div>
                     )}
-                  </div>
-                )}
-              </section>
+                  </h1>
 
-              <aside className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3">
-                <div className="mb-5 border-b pb-4">
-                  <h2 className="mb-3 text-lg font-semibold">Saved Forms</h2>
+                  <Input
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    className="w-40 sm:w-56"
+                    placeholder="Enter form title"
+                  />
 
+                  {/* Mobile Menu Icon */}
                   <Button
                     type="button"
-                    onClick={fetchSavedForms}
-                    className="mb-3 bg-indigo-600 text-white hover:bg-indigo-700"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsMenuOpen((prev) => !prev)}
+                    className="text-xl md:hidden"
+                    aria-label="Toggle menu"
+                    aria-expanded={isMenuOpen}
                   >
-                    Refresh Forms
+                    {isMenuOpen ? "✕" : "☰"}
                   </Button>
 
-                  <div className="space-y-2">
-                    {savedForms.map((form) => (
-                      <div
-                        key={form._id}
-                        className="flex flex-col items-center justify-between gap-2 rounded-lg border p-2"
-                      >
-                        <span className="text-sm font-bold">{form.title}</span>
-                        <span
-                          className={`text-xs font-medium ${
-                            form.status === "published"
-                              ? "text-green-700"
-                              : "text-amber-800"
-                          }`}
-                        >
-                          {form.status || "draft"}
-                        </span>
+                  {/* Desktop Buttons */}
+                  <div className="hidden items-center gap-3 md:flex">
+                    <Button
+                      onClick={handleSaveForm}
+                      disabled={isSaving}
+                      className="bg-green-700 text-white hover:bg-green-800"
+                    >
+                      {isSaving ? "Saving..." : "Save Form"}
+                    </Button>
 
-                        <div className="flex flex-wrap justify-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleLoadForm(form._id)}
-                          >
-                            Load
-                          </Button>
+                    <Button
+                      onClick={() => {
+                        handlePublishForm();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={
+                        !formId || isPublishing || formStatus === "published"
+                      }
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      {isPublishing
+                        ? "Publishing..."
+                        : formStatus === "published"
+                          ? "Published"
+                          : "Publish"}
+                    </Button>
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              window.open(`/forms/${form._id}`, "_blank")
-                            }
-                          >
-                            Open Form
-                          </Button>
+                    <Button variant="secondary" onClick={handleNewForm}>
+                      + New Form
+                    </Button>
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopyLink(form._id)}
-                          >
-                            Copy Link
-                          </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsPreview((current) => !current);
+                        setSubmittedData(null);
+                      }}
+                    >
+                      {isPreview ? "Back to Builder" : "Preview"}
+                    </Button>
 
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteForm(form._id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    <Button
+                      onClick={exportJSON}
+                      className="bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                      Export JSON
+                    </Button>
+
+                    <Label
+                      htmlFor="import-json"
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "lg",
+                        className: "cursor-pointer relative",
+                      })}
+                    >
+                      Import JSON
+                      <Input
+                        id="import-json"
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={importJSON}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </Label>
+
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        await logout();
+                        navigate("/login", { replace: true });
+                      }}
+                    >
+                      Logout
+                    </Button>
                   </div>
                 </div>
 
-                <h2 className="mb-4 text-lg font-semibold">Properties</h2>
-
-                {!selectedField ? (
-                  <p className="text-sm text-slate-500">
-                    Select a field to configure its properties.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-label`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Label
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-label`}
-                        value={selectedField.label}
-                        onChange={(e) =>
-                          updateSelectedField("label", e.target.value)
-                        }
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-name`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Name
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-name`}
-                        value={selectedField.name}
-                        onChange={(e) =>
-                          updateSelectedField("name", e.target.value)
-                        }
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-placeholder`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Placeholder
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-placeholder`}
-                        value={selectedField.placeholder}
-                        onChange={(e) =>
-                          updateSelectedField("placeholder", e.target.value)
-                        }
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-default`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Default Value
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-default`}
-                        value={selectedField.defaultValue ?? ""}
-                        onChange={(e) =>
-                          updateSelectedField("defaultValue", e.target.value)
-                        }
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-help`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Help Text
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-help`}
-                        value={selectedField.helpText ?? ""}
-                        onChange={(e) =>
-                          updateSelectedField("helpText", e.target.value)
-                        }
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Label
-                        htmlFor={`${selectedField.id}-property-required`}
-                        className="flex items-center gap-2"
-                      >
-                        <Checkbox
-                          id={`${selectedField.id}-property-required`}
-                          checked={selectedField.required}
-                          onCheckedChange={(checked) =>
-                            updateSelectedField("required", checked === true)
-                          }
-                        />
-                        Required field
-                      </Label>
-                    </div>
-
-                    <div className="space-y-3 rounded-lg border p-3">
-                      <h3 className="font-medium">Conditional Logic</h3>
-
-                      <Label
-                        htmlFor={`${selectedField.id}-condition-field`}
-                        className="block text-sm"
-                      >
-                        Show this field when
-                      </Label>
-
-                      {/* Source field: native select retained to preserve empty-string behaviour */}
-                      <select
-                        id={`${selectedField.id}-condition-field`}
-                        className="w-full rounded-lg border p-2"
-                        value={selectedField.conditions?.[0]?.fieldId || ""}
-                        onChange={(e) => {
-                          const selectedId = e.target.value;
-                          const currentConditions =
-                            selectedField.conditions || [];
-
-                          if (!selectedId) {
-                            updateSelectedField(
-                              "conditions",
-                              currentConditions.slice(1),
-                            );
-                            return;
-                          }
-
-                          const updatedConditions = [...currentConditions];
-
-                          if (updatedConditions.length > 0) {
-                            updatedConditions[0] = {
-                              ...updatedConditions[0],
-                              fieldId: selectedId,
-                            };
-                          } else {
-                            updatedConditions.push({
-                              fieldId: selectedId,
-                              operator: "equals",
-                              value: "",
-                            });
-                          }
-
-                          updateSelectedField("conditions", updatedConditions);
-                        }}
-                      >
-                        <option value="">Always show</option>
-
-                        {fields
-                          .filter((field) => field.id !== selectedField.id)
-                          .map((field) => (
-                            <option key={field.id} value={field.id}>
-                              {field.label}
-                            </option>
-                          ))}
-                      </select>
-
-                      {selectedField.conditions?.length > 0 && (
-                        <div className="space-y-3">
-                          <Label
-                            htmlFor={`${selectedField.id}-condition-match`}
-                            className="font-medium"
-                          >
-                            Match Conditions
-                          </Label>
-
-                          {/* AND / OR selection */}
-                          <Select
-                            value={selectedField.conditionLogic || "AND"}
-                            onValueChange={(value) =>
-                              updateSelectedField("conditionLogic", value)
-                            }
-                          >
-                            <SelectTrigger
-                              id={`${selectedField.id}-condition-match`}
-                              className="w-full"
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-
-                            <SelectContent>
-                              <SelectItem value="AND">
-                                Match ALL conditions (AND)
-                              </SelectItem>
-
-                              <SelectItem value="OR">
-                                Match ANY condition (OR)
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          {/* Multiple conditions */}
-                          {selectedField.conditions.map((condition, index) => (
-                            <div
-                              key={index}
-                              className="space-y-2 rounded-lg border p-3"
-                            >
-                              <Label
-                                htmlFor={`${selectedField.id}-condition-${index}`}
-                                className="text-sm font-medium"
-                              >
-                                Condition {index + 1}
-                              </Label>
-
-                              {/* Source field: native select retained to preserve empty-string behaviour */}
-                              <select
-                                id={`${selectedField.id}-condition-${index}`}
-                                className="w-full rounded-lg border p-2"
-                                value={condition.fieldId}
-                                onChange={(e) => {
-                                  const updated = [...selectedField.conditions];
-
-                                  updated[index] = {
-                                    ...condition,
-                                    fieldId: e.target.value,
-                                  };
-
-                                  updateSelectedField("conditions", updated);
-                                }}
-                              >
-                                <option value="">Select field</option>
-
-                                {fields
-                                  .filter(
-                                    (field) => field.id !== selectedField.id,
-                                  )
-                                  .map((field) => (
-                                    <option key={field.id} value={field.id}>
-                                      {field.label}
-                                    </option>
-                                  ))}
-                              </select>
-
-                              {/* Operator */}
-                              <Select
-                                value={condition.operator}
-                                onValueChange={(value) => {
-                                  const updated = [...selectedField.conditions];
-
-                                  updated[index] = {
-                                    ...condition,
-                                    operator: value,
-                                  };
-
-                                  updateSelectedField("conditions", updated);
-                                }}
-                              >
-                                <SelectTrigger
-                                  id={`${selectedField.id}-condition-operator-${index}`}
-                                  aria-label={`Condition ${index + 1} operator`}
-                                  className="w-full"
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-
-                                <SelectContent>
-                                  <SelectItem value="equals">Equals</SelectItem>
-                                  <SelectItem value="notEquals">
-                                    Does not equal
-                                  </SelectItem>
-                                  <SelectItem value="contains">
-                                    Contains
-                                  </SelectItem>
-                                  <SelectItem value="greaterThan">
-                                    Greater than
-                                  </SelectItem>
-                                  <SelectItem value="lessThan">
-                                    Less than
-                                  </SelectItem>
-                                  <SelectItem value="isEmpty">
-                                    Is empty
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-
-                              {/* Comparison value */}
-                              {condition.operator !== "isEmpty" && (
-                                <Input
-                                  id={`${selectedField.id}-condition-value-${index}`}
-                                  aria-label={`Condition ${index + 1} comparison value`}
-                                  placeholder="Comparison value"
-                                  value={condition.value ?? ""}
-                                  onChange={(e) => {
-                                    const updated = [
-                                      ...selectedField.conditions,
-                                    ];
-
-                                    updated[index] = {
-                                      ...condition,
-                                      value: e.target.value,
-                                    };
-
-                                    updateSelectedField("conditions", updated);
-                                  }}
-                                />
-                              )}
-
-                              {/* Remove condition */}
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() =>
-                                  updateSelectedField(
-                                    "conditions",
-                                    selectedField.conditions.filter(
-                                      (_, i) => i !== index,
-                                    ),
-                                  )
-                                }
-                              >
-                                Remove Condition
-                              </Button>
-                            </div>
-                          ))}
-
-                          {/* Add condition */}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() =>
-                              updateSelectedField("conditions", [
-                                ...selectedField.conditions,
-                                {
-                                  fieldId: "",
-                                  operator: "equals",
-                                  value: "",
-                                },
-                              ])
-                            }
-                          >
-                            + Add Condition
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {["Text", "Textarea", "Email"].includes(
-                      selectedField.type,
-                    ) && (
-                      <>
-                        <div>
-                          <Label
-                            htmlFor={`${selectedField.id}-property-min-length`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Minimum Length
-                          </Label>
-                          <Input
-                            id={`${selectedField.id}-property-min-length`}
-                            type="number"
-                            min="0"
-                            value={selectedField.minLength ?? ""}
-                            onChange={(e) =>
-                              updateSelectedField("minLength", e.target.value)
-                            }
-                            className="w-full rounded-lg border p-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label
-                            htmlFor={`${selectedField.id}-property-max-length`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Maximum Length
-                          </Label>
-                          <Input
-                            id={`${selectedField.id}-property-max-length`}
-                            type="number"
-                            min="0"
-                            value={selectedField.maxLength ?? ""}
-                            onChange={(e) =>
-                              updateSelectedField("maxLength", e.target.value)
-                            }
-                            className="w-full rounded-lg border p-2"
-                          />
-                        </div>
-                        <div>
-                          <Label
-                            htmlFor={`${selectedField.id}-property-pattern`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Regex Pattern
-                          </Label>
-                          <Input
-                            id={`${selectedField.id}-property-pattern`}
-                            value={selectedField.pattern ?? ""}
-                            onChange={(e) =>
-                              updateSelectedField("pattern", e.target.value)
-                            }
-                            placeholder="Example: ^[A-Za-z]+$"
-                            className="w-full rounded-lg border p-2"
-                          />
-                          {selectedField.pattern &&
-                            validatePattern(selectedField.pattern) && (
-                              <p
-                                className="mt-1 text-sm text-red-600"
-                                role="alert"
-                              >
-                                {validatePattern(selectedField.pattern)}
-                              </p>
-                            )}
-                        </div>
-                      </>
-                    )}
-
-                    {selectedField.type === "Number" && (
-                      <>
-                        <div>
-                          <Label
-                            htmlFor={`${selectedField.id}-property-min-value`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Minimum Value
-                          </Label>
-                          <Input
-                            id={`${selectedField.id}-property-min-value`}
-                            type="number"
-                            value={selectedField.minValue ?? ""}
-                            onChange={(e) =>
-                              updateSelectedField("minValue", e.target.value)
-                            }
-                            className="w-full rounded-lg border p-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label
-                            htmlFor={`${selectedField.id}-property-max-value`}
-                            className="mb-1 block text-sm font-medium"
-                          >
-                            Maximum Value
-                          </Label>
-                          <Input
-                            id={`${selectedField.id}-property-max-value`}
-                            type="number"
-                            value={selectedField.maxValue ?? ""}
-                            onChange={(e) =>
-                              updateSelectedField("maxValue", e.target.value)
-                            }
-                            className="w-full rounded-lg border p-2"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <div>
-                      <Label
-                        htmlFor={`${selectedField.id}-property-custom-error`}
-                        className="mb-1 block text-sm font-medium"
-                      >
-                        Custom Error Message
-                      </Label>
-                      <Input
-                        id={`${selectedField.id}-property-custom-error`}
-                        value={selectedField.errorMessage ?? ""}
-                        onChange={(e) =>
-                          updateSelectedField("errorMessage", e.target.value)
-                        }
-                        placeholder="Please enter a valid value"
-                        className="w-full rounded-lg border p-2"
-                      />
-                    </div>
-
-                    {(selectedField.type === "Select" ||
-                      selectedField.type === "Radio Group") && (
-                      <div>
-                        <Label
-                          htmlFor={`${selectedField.id}-radio-options`}
-                          className="mb-1 block text-sm font-medium"
-                        >
-                          Options
-                        </Label>
-
-                        <Textarea
-                          id={`${selectedField.id}-radio-options`}
-                          value={(selectedField.options || []).join("\n")}
-                          onChange={(e) =>
-                            updateSelectedField(
-                              "options",
-                              e.target.value.split("\n"),
-                            )
-                          }
-                          rows={4}
-                          className="w-full rounded-lg border p-2"
-                          placeholder={"India\nUSA\nCanada"}
-                        />
-                      </div>
-                    )}
+                {/* Mobile Dropdown Menu */}
+                {isMenuOpen && (
+                  <div className="mt-4 flex flex-col gap-2 md:hidden">
+                    <Button
+                      onClick={() => {
+                        handleSaveForm();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={isSaving}
+                      className="w-full bg-green-700 text-white hover:bg-green-800"
+                    >
+                      {isSaving ? "Saving..." : "Save Form"}
+                    </Button>
 
                     <Button
-                      type="button"
-                      variant="destructive"
-                      className="w-full"
-                      onClick={deleteSelectedField}
+                      onClick={() => {
+                        handlePublishForm();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={
+                        !formId || isPublishing || formStatus === "published"
+                      }
+                      className="w-full bg-blue-600 text-white hover:bg-blue-700"
                     >
-                      Delete Field
+                      {isPublishing
+                        ? "Publishing..."
+                        : formStatus === "published"
+                          ? "Published"
+                          : "Publish"}
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => {
+                        handleNewForm();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      + New Form
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setIsPreview((current) => !current);
+                        setSubmittedData(null);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      {isPreview ? "Back to Builder" : "Preview"}
+                    </Button>
+
+                    <Button
+                      className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+                      onClick={() => {
+                        exportJSON();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Export JSON
+                    </Button>
+
+                    <Label
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "lg",
+                        className: "w-full cursor-pointer",
+                      })}
+                    >
+                      Import JSON
+                      <Input
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={(e) => {
+                          importJSON(e);
+                          setIsMenuOpen(false);
+                        }}
+                        className="sr-only"
+                      />
+                    </Label>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={async () => {
+                        setIsMenuOpen(false);
+                        await logout();
+                        navigate("/login", { replace: true });
+                      }}
+                    >
+                      Logout
                     </Button>
                   </div>
                 )}
-              </aside>
-            </main>
-          </div>
+
+                {saveMessage && (
+                  <p
+                    className={`mt-2 text-sm ${saveMessageType === "error"
+                      ? "text-red-500"
+                      : "text-green-700"
+                      }`}
+                  >
+                    {saveMessage}
+                  </p>
+                )}
+
+                {importError && (
+                  <p role="alert" className="mt-2 text-sm text-red-600">
+                    {importError}
+                  </p>
+                )}
+              </header>
+
+              <main className="grid min-h-[calc(100vh-73px)] grid-cols-1 sm:p-4 lg:grid-cols-12 gap-4 p-4">
+                <aside
+                  aria-label="Field Palette"
+                  className="rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3"
+                >
+                  {" "}
+                  <h2 className="mb-4 text-lg font-semibold">Field Palette</h2>
+                  <div className="space-y-3">
+                    {fieldTypes.map((type) => (
+                      <Button
+                        key={type}
+                        type="button"
+                        variant="outline"
+                        draggable
+                        onClick={() => addField(type)}
+                        onDragStart={() => setDraggedFieldType(type)}
+                        onDragEnd={() => setDraggedFieldType(null)}
+                        className="w-full justify-start p-3 hover:border-indigo-500 hover:bg-indigo-50"
+                      >
+                        + {type}
+                      </Button>
+                    ))}
+                  </div>
+                </aside>
+
+                <section className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-6">
+                  <h2 className="mb-4 text-lg font-semibold">
+                    {isPreview ? "Form Preview" : "Form Canvas"}
+                  </h2>
+
+                  {isPreview ? (
+                    <Formik
+                      initialValues={previewInitialValues}
+                      validate={validatePreviewForm}
+                      onSubmit={handleFormikSubmit}
+                    >
+                      <Form noValidate className="space-y-4">
+                        <FormRenderer
+                          schema={{ title: formTitle, fields }}
+                          onValueChange={updateFormValue}
+                        />
+
+                        <Button
+                          type="submit"
+                          className="bg-indigo-600 text-white hover:bg-indigo-700"
+                        >
+                          Submit
+                        </Button>
+
+                        {submittedData && (
+                          <pre
+                            tabIndex={0}
+                            className="overflow-auto rounded-lg bg-slate-100 p-3 text-sm focus:outline-2 focus:outline-indigo-600"
+                          >
+                            {JSON.stringify(submittedData, null, 2)}
+                          </pre>
+                        )}
+                      </Form>
+                    </Formik>
+                  ) : (
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+
+                        if (draggedFieldType) {
+                          addField(draggedFieldType);
+                          setDraggedFieldType(null);
+                        }
+                      }}
+                      className="min-h-[500px] space-y-4 rounded-lg border-2 border-dashed border-slate-300 p-4"
+                    >
+                      {fields.length === 0 ? (
+                        <p className="py-20 text-center text-slate-500">
+                          Add fields here to build your form.
+                        </p>
+                      ) : (
+                        fields.map((field) => (
+                          <div
+                            key={field.id}
+                            tabIndex={0}
+
+                            onKeyDown={(e) => {
+                              if (e.target !== e.currentTarget) return;
+
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedFieldId(field.id);
+                              }
+
+                              if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                moveField(field.id, -1);
+                              }
+
+                              if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                moveField(field.id, 1);
+                              }
+                            }}
+                            draggable
+                            onDragStart={() => setDraggedFieldId(field.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => handleDrop(field.id)}
+                            onDragEnd={() => setDraggedFieldId(null)}
+                            onClick={() => setSelectedFieldId(field.id)}
+
+                            className={`cursor-move rounded-lg border bg-white p-4 ${selectedFieldId === field.id
+                              ? "border-indigo-600 ring-2 ring-indigo-100"
+                              : "border-slate-200"
+                              } ${draggedFieldId === field.id ? "opacity-50" : ""}`}
+                          >
+                            {renderField(field)}
+                            {field.helpText && (
+                              <p className="mt-1 text-sm text-slate-500">
+                                {field.helpText}
+                              </p>
+                            )}
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              Type: {field.type} · Name: {field.name}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <aside className="min-w-0 rounded-xl border bg-white p-3 sm:p-4 lg:col-span-3">
+                  <div className="mb-5 border-b pb-4">
+                    <h2 className="mb-3 text-lg font-semibold">Saved Forms</h2>
+
+                    <Button
+                      type="button"
+                      onClick={fetchSavedForms}
+                      className="mb-3 bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                      Refresh Forms
+                    </Button>
+
+                    <div className="space-y-2">
+                      {savedForms.map((form) => (
+                        <div
+                          key={form._id}
+                          className="flex flex-col items-center justify-between gap-2 rounded-lg border p-2"
+                        >
+                          <span className="text-sm font-bold">
+                            {form.title}
+                          </span>
+                          <span
+                            className={`text-xs font-medium ${form.status === "published"
+                              ? "text-green-700"
+                              : "text-amber-800"
+                              }`}
+                          >
+                            {form.status || "draft"}
+                          </span>
+
+                          <div className="flex flex-wrap justify-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleLoadForm(form._id)}
+                            >
+                              Load
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                window.open(`/forms/${form._id}`, "_blank")
+                              }
+                            >
+                              Open Form
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCopyLink(form._id)}
+                            >
+                              Copy Link
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteForm(form._id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <h2 className="mb-4 text-lg font-semibold">Properties</h2>
+
+                  {!selectedField ? (
+                    <p className="text-sm text-slate-500">
+                      Select a field to configure its properties.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-label`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Label
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-label`}
+                          value={selectedField.label}
+                          onChange={(e) =>
+                            updateSelectedField("label", e.target.value)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-name`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Name
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-name`}
+                          value={selectedField.name}
+                          onChange={(e) =>
+                            updateSelectedField("name", e.target.value)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-placeholder`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Placeholder
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-placeholder`}
+                          value={selectedField.placeholder}
+                          onChange={(e) =>
+                            updateSelectedField("placeholder", e.target.value)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-default`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Default Value
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-default`}
+                          value={selectedField.defaultValue ?? ""}
+                          onChange={(e) =>
+                            updateSelectedField("defaultValue", e.target.value)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-help`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Help Text
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-help`}
+                          value={selectedField.helpText ?? ""}
+                          onChange={(e) =>
+                            updateSelectedField("helpText", e.target.value)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor={`${selectedField.id}-property-required`}
+                          className="flex items-center gap-2"
+                        >
+                          <Checkbox
+                            id={`${selectedField.id}-property-required`}
+                            checked={selectedField.required}
+                            onCheckedChange={(checked) =>
+                              updateSelectedField("required", checked === true)
+                            }
+                          />
+                          Required field
+                        </Label>
+                      </div>
+
+                      <div className="space-y-3 rounded-lg border p-3">
+                        <h3 className="font-medium">Conditional Logic</h3>
+
+                        <Label
+                          htmlFor={`${selectedField.id}-condition-field`}
+                          className="block text-sm"
+                        >
+                          Show this field when
+                        </Label>
+
+                        {/* Source field: native select retained to preserve empty-string behaviour */}
+                        <select
+                          id={`${selectedField.id}-condition-field`}
+                          className="w-full rounded-lg border p-2"
+                          value={selectedField.conditions?.[0]?.fieldId || ""}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            const currentConditions =
+                              selectedField.conditions || [];
+
+                            if (!selectedId) {
+                              updateSelectedField(
+                                "conditions",
+                                currentConditions.slice(1),
+                              );
+                              return;
+                            }
+
+                            const updatedConditions = [...currentConditions];
+
+                            if (updatedConditions.length > 0) {
+                              updatedConditions[0] = {
+                                ...updatedConditions[0],
+                                fieldId: selectedId,
+                              };
+                            } else {
+                              updatedConditions.push({
+                                fieldId: selectedId,
+                                operator: "equals",
+                                value: "",
+                              });
+                            }
+
+                            updateSelectedField(
+                              "conditions",
+                              updatedConditions,
+                            );
+                          }}
+                        >
+                          <option value="">Always show</option>
+
+                          {fields
+                            .filter((field) => field.id !== selectedField.id)
+                            .map((field) => (
+                              <option key={field.id} value={field.id}>
+                                {field.label}
+                              </option>
+                            ))}
+                        </select>
+
+                        {selectedField.conditions?.length > 0 && (
+                          <div className="space-y-3">
+                            <Label
+                              htmlFor={`${selectedField.id}-condition-match`}
+                              className="font-medium"
+                            >
+                              Match Conditions
+                            </Label>
+
+                            {/* AND / OR selection */}
+                            <Select
+                              value={selectedField.conditionLogic || "AND"}
+                              onValueChange={(value) =>
+                                updateSelectedField("conditionLogic", value)
+                              }
+                            >
+                              <SelectTrigger
+                                id={`${selectedField.id}-condition-match`}
+                                className="w-full"
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                <SelectItem value="AND">
+                                  Match ALL conditions (AND)
+                                </SelectItem>
+
+                                <SelectItem value="OR">
+                                  Match ANY condition (OR)
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {/* Multiple conditions */}
+                            {selectedField.conditions.map(
+                              (condition, index) => (
+                                <div
+                                  key={index}
+                                  className="space-y-2 rounded-lg border p-3"
+                                >
+                                  <Label
+                                    htmlFor={`${selectedField.id}-condition-${index}`}
+                                    className="text-sm font-medium"
+                                  >
+                                    Condition {index + 1}
+                                  </Label>
+
+                                  {/* Source field: native select retained to preserve empty-string behaviour */}
+                                  <select
+                                    id={`${selectedField.id}-condition-${index}`}
+                                    className="w-full rounded-lg border p-2"
+                                    value={condition.fieldId}
+                                    onChange={(e) => {
+                                      const updated = [
+                                        ...selectedField.conditions,
+                                      ];
+
+                                      updated[index] = {
+                                        ...condition,
+                                        fieldId: e.target.value,
+                                      };
+
+                                      updateSelectedField(
+                                        "conditions",
+                                        updated,
+                                      );
+                                    }}
+                                  >
+                                    <option value="">Select field</option>
+
+                                    {fields
+                                      .filter(
+                                        (field) =>
+                                          field.id !== selectedField.id,
+                                      )
+                                      .map((field) => (
+                                        <option key={field.id} value={field.id}>
+                                          {field.label}
+                                        </option>
+                                      ))}
+                                  </select>
+
+                                  {/* Operator */}
+                                  <Select
+                                    value={condition.operator}
+                                    onValueChange={(value) => {
+                                      const updated = [
+                                        ...selectedField.conditions,
+                                      ];
+
+                                      updated[index] = {
+                                        ...condition,
+                                        operator: value,
+                                      };
+
+                                      updateSelectedField(
+                                        "conditions",
+                                        updated,
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      id={`${selectedField.id}-condition-operator-${index}`}
+                                      aria-label={`Condition ${index + 1} operator`}
+                                      className="w-full"
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                      <SelectItem value="equals">
+                                        Equals
+                                      </SelectItem>
+                                      <SelectItem value="notEquals">
+                                        Does not equal
+                                      </SelectItem>
+                                      <SelectItem value="contains">
+                                        Contains
+                                      </SelectItem>
+                                      <SelectItem value="greaterThan">
+                                        Greater than
+                                      </SelectItem>
+                                      <SelectItem value="lessThan">
+                                        Less than
+                                      </SelectItem>
+                                      <SelectItem value="isEmpty">
+                                        Is empty
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+
+                                  {/* Comparison value */}
+                                  {condition.operator !== "isEmpty" && (
+                                    <Input
+                                      id={`${selectedField.id}-condition-value-${index}`}
+                                      aria-label={`Condition ${index + 1} comparison value`}
+                                      placeholder="Comparison value"
+                                      value={condition.value ?? ""}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...selectedField.conditions,
+                                        ];
+
+                                        updated[index] = {
+                                          ...condition,
+                                          value: e.target.value,
+                                        };
+
+                                        updateSelectedField(
+                                          "conditions",
+                                          updated,
+                                        );
+                                      }}
+                                    />
+                                  )}
+
+                                  {/* Remove condition */}
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                      updateSelectedField(
+                                        "conditions",
+                                        selectedField.conditions.filter(
+                                          (_, i) => i !== index,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    Remove Condition
+                                  </Button>
+                                </div>
+                              ),
+                            )}
+
+                            {/* Add condition */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() =>
+                                updateSelectedField("conditions", [
+                                  ...selectedField.conditions,
+                                  {
+                                    fieldId: "",
+                                    operator: "equals",
+                                    value: "",
+                                  },
+                                ])
+                              }
+                            >
+                              + Add Condition
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {["Text", "Textarea", "Email"].includes(
+                        selectedField.type,
+                      ) && (
+                          <>
+                            <div>
+                              <Label
+                                htmlFor={`${selectedField.id}-property-min-length`}
+                                className="mb-1 block text-sm font-medium"
+                              >
+                                Minimum Length
+                              </Label>
+                              <Input
+                                id={`${selectedField.id}-property-min-length`}
+                                type="number"
+                                min="0"
+                                value={selectedField.minLength ?? ""}
+                                onChange={(e) =>
+                                  updateSelectedField("minLength", e.target.value)
+                                }
+                                className="w-full rounded-lg border p-2"
+                              />
+                            </div>
+
+                            <div>
+                              <Label
+                                htmlFor={`${selectedField.id}-property-max-length`}
+                                className="mb-1 block text-sm font-medium"
+                              >
+                                Maximum Length
+                              </Label>
+                              <Input
+                                id={`${selectedField.id}-property-max-length`}
+                                type="number"
+                                min="0"
+                                value={selectedField.maxLength ?? ""}
+                                onChange={(e) =>
+                                  updateSelectedField("maxLength", e.target.value)
+                                }
+                                className="w-full rounded-lg border p-2"
+                              />
+                            </div>
+                            <div>
+                              <Label
+                                htmlFor={`${selectedField.id}-property-pattern`}
+                                className="mb-1 block text-sm font-medium"
+                              >
+                                Regex Pattern
+                              </Label>
+                              <Input
+                                id={`${selectedField.id}-property-pattern`}
+                                value={selectedField.pattern ?? ""}
+                                onChange={(e) =>
+                                  updateSelectedField("pattern", e.target.value)
+                                }
+                                placeholder="Example: ^[A-Za-z]+$"
+                                className="w-full rounded-lg border p-2"
+                              />
+                              {selectedField.pattern &&
+                                validatePattern(selectedField.pattern) && (
+                                  <p
+                                    className="mt-1 text-sm text-red-600"
+                                    role="alert"
+                                  >
+                                    {validatePattern(selectedField.pattern)}
+                                  </p>
+                                )}
+                            </div>
+                          </>
+                        )}
+
+                      {selectedField.type === "Number" && (
+                        <>
+                          <div>
+                            <Label
+                              htmlFor={`${selectedField.id}-property-min-value`}
+                              className="mb-1 block text-sm font-medium"
+                            >
+                              Minimum Value
+                            </Label>
+                            <Input
+                              id={`${selectedField.id}-property-min-value`}
+                              type="number"
+                              value={selectedField.minValue ?? ""}
+                              onChange={(e) =>
+                                updateSelectedField("minValue", e.target.value)
+                              }
+                              className="w-full rounded-lg border p-2"
+                            />
+                          </div>
+
+                          <div>
+                            <Label
+                              htmlFor={`${selectedField.id}-property-max-value`}
+                              className="mb-1 block text-sm font-medium"
+                            >
+                              Maximum Value
+                            </Label>
+                            <Input
+                              id={`${selectedField.id}-property-max-value`}
+                              type="number"
+                              value={selectedField.maxValue ?? ""}
+                              onChange={(e) =>
+                                updateSelectedField("maxValue", e.target.value)
+                              }
+                              className="w-full rounded-lg border p-2"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <Label
+                          htmlFor={`${selectedField.id}-property-custom-error`}
+                          className="mb-1 block text-sm font-medium"
+                        >
+                          Custom Error Message
+                        </Label>
+                        <Input
+                          id={`${selectedField.id}-property-custom-error`}
+                          value={selectedField.errorMessage ?? ""}
+                          onChange={(e) =>
+                            updateSelectedField("errorMessage", e.target.value)
+                          }
+                          placeholder="Please enter a valid value"
+                          className="w-full rounded-lg border p-2"
+                        />
+                      </div>
+
+                      {(selectedField.type === "Select" ||
+                        selectedField.type === "Radio Group") && (
+                          <div>
+                            <Label
+                              htmlFor={`${selectedField.id}-radio-options`}
+                              className="mb-1 block text-sm font-medium"
+                            >
+                              Options
+                            </Label>
+
+                            <Textarea
+                              id={`${selectedField.id}-radio-options`}
+                              value={(selectedField.options || []).join("\n")}
+                              onChange={(e) =>
+                                updateSelectedField(
+                                  "options",
+                                  e.target.value.split("\n"),
+                                )
+                              }
+                              rows={4}
+                              className="w-full rounded-lg border p-2"
+                              placeholder={"India\nUSA\nCanada"}
+                            />
+                          </div>
+                        )}
+
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="w-full"
+                        onClick={deleteSelectedField}
+                      >
+                        Delete Field
+                      </Button>
+                    </div>
+                  )}
+                </aside>
+              </main>
+            </div>
+          </ProtectedRoute>
         }
       />
       <Route path="/forms/:id" element={<PublishedFormPage />} />
+      <Route path="/login" element={<Auth />} />
+      <Route path="/signup" element={<Auth />} />
     </Routes>
   );
 }

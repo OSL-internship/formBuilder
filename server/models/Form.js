@@ -115,7 +115,7 @@ const fieldSchema = new mongoose.Schema(
 
 const formSchema = new mongoose.Schema(
   {
-     userId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -142,5 +142,3 @@ const formSchema = new mongoose.Schema(
 const Form = mongoose.model("Form", formSchema);
 
 export default Form;
-
-

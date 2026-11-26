@@ -4,11 +4,12 @@ export async function apiRequest(endpoint, options = {}) {
 
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
       },
-      ...options,
     });
   } catch {
     throw new Error("Unable to connect to the server. Please try again later.");
